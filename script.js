@@ -1943,10 +1943,7 @@ function copyLastRecord() {
     });
     
     // 設置金額
-    const amountDisplay = document.getElementById('amountDisplay');
-    if (amountDisplay) {
-        amountDisplay.textContent = (lastRecord.amount || 0).toLocaleString('zh-TW');
-    }
+    setAmountValue(lastRecord.amount || 0);
     
     // 設置備註
     const noteInput = document.getElementById('noteInput');
@@ -2523,35 +2520,6 @@ function initInvestmentPage() {
         });
     }
     
-    // 初始化強制重新抓價按鈕
-    const forceRefreshBtn = document.getElementById('forceRefreshBtn');
-    if (forceRefreshBtn) {
-        forceRefreshBtn.addEventListener('click', async () => {
-            playClickSound();
-            forceRefreshBtn.disabled = true;
-            forceRefreshBtn.textContent = '⏳';
-            try {
-                await forceRefreshAllPrices();
-            } finally {
-                forceRefreshBtn.disabled = false;
-                forceRefreshBtn.textContent = '🔄';
-            }
-        });
-    }
-    
-    // 初始化定時自動更新按鈕
-    const autoRefreshBtn = document.getElementById('autoRefreshToggleBtn');
-    if (autoRefreshBtn) {
-        autoRefreshBtn.addEventListener('click', () => {
-            playClickSound();
-            toggleAutoRefreshPrices();
-        });
-    }
-    
-    // 初始化定時更新狀態
-    initAutoRefreshPrices();
-    updateAutoRefreshButton();
-
     // 初始化搜尋功能
     initStockSearch();
     
