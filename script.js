@@ -3281,21 +3281,28 @@ function showStockPriceQueryModal({ stockCode, stockName, isBondETF, defaultPric
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
 
-        const content = document.createElement('div');
-        content.className = 'modal-content price-query-modal__content';
-
+        const header = document.createElement('div');
+        header.className = 'price-query-modal__header';
         const title = document.createElement('h3');
-        title.className = 'modal-title';
-        title.textContent = `無法自動獲取 ${stockName} (${stockCode}) 的現價`;
+        title.textContent = `無法取得 ${stockName || stockCode} 現價`;
+        header.appendChild(title);
+
+        const queryBtn = document.createElement('button');
+        queryBtn.type = 'button';
+        queryBtn.className = 'price-query-modal__action';
+        queryBtn.textContent = '🔍 查詢';
+        queryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const targetSite = querySites[0];
+            if (targetSite && targetSite.url) {
+                window.open(targetSite.url, '_blank', 'noopener,noreferrer');
+            }
+        });
+        header.appendChild(queryBtn);
 
         const closeBtn = document.createElement('button');
-        closeBtn.className = 'modal-close-btn';
-        closeBtn.type = 'button';
-        closeBtn.textContent = '✕';
-
-        const header = document.createElement('div');
-        header.className = 'modal-header';
-        header.appendChild(title);
+        closeBtn.className = 'price-query-modal__close';
+        closeBtn.textContent = '×';
         header.appendChild(closeBtn);
 
         const body = document.createElement('div');
@@ -7658,11 +7665,11 @@ function initDailyBudgetPage(categoryName = '生活費') {
         if (nextMonthBills.length > 0) {
             const nextMonthTotal = nextMonthBills.reduce((sum, record) => sum + (record.amount || 0), 0);
             nextMonthBillsHtml = `
-                <div class="summary-item" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 100%); border-radius: 12px; padding: 12px; cursor: pointer;" onclick="showNextMonthBills('${categoryName}')">
+                <button class="summary-item summary-item--cta" type="button" data-category="${categoryName}">
                     <div class="summary-label">下月預約扣款</div>
-                    <div class="summary-value" style="color: #667eea;">NT$${nextMonthTotal.toLocaleString('zh-TW')}</div>
-                    <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">共 ${nextMonthBills.length} 筆 · 點擊查看</div>
-                </div>
+                    <div class="summary-value highlight">NT$${nextMonthTotal.toLocaleString('zh-TW')}</div>
+                    <div class="summary-cta-text">共 ${nextMonthBills.length} 筆 · 點擊查看</div>
+                </button>
             `;
         }
     }
@@ -7671,7 +7678,7 @@ function initDailyBudgetPage(categoryName = '生活費') {
     const summary = document.getElementById('dailyBudgetSummary');
     if (summary) {
         summary.innerHTML = `
-            <div class="daily-budget-summary-card">
+            <div class="daily-budget-summary-card" id="dailyBudgetSummaryCard">
                 <div class="summary-item">
                     <div class="summary-label">總預算</div>
                     <div class="summary-value">NT$${budget.toLocaleString('zh-TW')}</div>
@@ -7699,6 +7706,17 @@ function initDailyBudgetPage(categoryName = '生活費') {
                 ${nextMonthBillsHtml}
             </div>
         `;
+    }
+    
+    // 綁定下月預約扣款按鈕
+    const summaryCard = document.getElementById('dailyBudgetSummaryCard');
+    if (summaryCard) {
+        summaryCard.querySelectorAll('.summary-item--cta').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cat = btn.dataset.category || '卡費';
+                showNextMonthBills(cat);
+            });
+        });
     }
     
     // 生成每日日曆
@@ -8001,125 +8019,94 @@ function showNextMonthBills(categoryName) {
     // 創建模態框
     const modal = document.createElement('div');
     modal.className = 'next-month-bills-modal';
-    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10006; display: flex; align-items: center; justify-content: center; padding: 20px;';
     
-    let billsHtml = '';
-    if (nextMonthBills.length === 0) {
-        billsHtml = '<div style="text-align: center; padding: 40px; color: var(--text-tertiary);">沒有下月預約扣款</div>';
-    } else {
-        nextMonthBills.forEach(record => {
+    const panel = document.createElement('div');
+    panel.className = 'next-month-bills-panel';
+    
+    const billsHtml = nextMonthBills.length === 0
+        ? '<div class="next-month-bills-empty">沒有下月預約扣款</div>'
+        : nextMonthBills.map(record => {
             const recordDate = new Date(record.date);
             const day = recordDate.getDate();
             const recordId = record.timestamp || record.id || '';
             const noteText = record.note && record.note !== '(下月帳單)' ? record.note.replace('(下月帳單)', '').trim() : '';
-            
-            billsHtml += `
-                <div class="next-month-bill-item" style="background: var(--bg-light); border-radius: 16px; margin-bottom: 12px; border-left: 4px solid #667eea; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                    <!-- 主要內容區 -->
-                    <div style="display: flex; align-items: center; gap: 12px; padding: 14px;">
-                        <div style="font-size: 28px; flex-shrink: 0; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.1)); border-radius: 12px;">💳</div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 2px; font-size: 16px;">${nextMonthNum + 1}月${day}日</div>
-                            ${noteText ? `<div style="font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${noteText}</div>` : '<div style="font-size: 11px; color: var(--text-tertiary);">無備註</div>'}
+            return `
+                <div class="next-month-bill-item">
+                    <div class="next-month-bill-main">
+                        <div class="next-month-bill-icon">💳</div>
+                        <div class="next-month-bill-info">
+                            <div class="next-month-bill-date">${nextMonthNum + 1}月${day}日</div>
+                            <div class="next-month-bill-note ${noteText ? '' : 'is-empty'}">${noteText || '無備註'}</div>
                         </div>
-                        <div style="text-align: right; flex-shrink: 0;">
-                            <div style="font-size: 18px; font-weight: 700; color: #667eea;">NT$${(record.amount || 0).toLocaleString('zh-TW')}</div>
-                        </div>
+                        <div class="next-month-bill-amount">NT$${(record.amount || 0).toLocaleString('zh-TW')}</div>
                     </div>
-                    <!-- 操作按鈕區 -->
-                    <div style="display: flex; border-top: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.5);">
-                        <button class="edit-next-month-bill-btn" data-record-id="${recordId}" style="flex: 1; padding: 12px; background: none; border: none; border-right: 1px solid rgba(0,0,0,0.05); cursor: pointer; font-size: 14px; font-weight: 600; color: #667eea; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                            <span style="font-size: 16px;">✏️</span>
-                            <span>編輯</span>
+                    <div class="next-month-bill-actions">
+                        <button class="next-month-bill-btn next-month-bill-btn--edit edit-next-month-bill-btn" data-record-id="${recordId}" type="button">
+                            <span>✏️</span><span>編輯</span>
                         </button>
-                        <button class="delete-next-month-bill-btn" data-record-id="${recordId}" style="flex: 1; padding: 12px; background: none; border: none; cursor: pointer; font-size: 14px; font-weight: 600; color: #ef4444; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                            <span style="font-size: 16px;">🗑️</span>
-                            <span>刪除</span>
+                        <button class="next-month-bill-btn next-month-bill-btn--delete delete-next-month-bill-btn" data-record-id="${recordId}" type="button">
+                            <span>🗑️</span><span>刪除</span>
                         </button>
                     </div>
                 </div>
             `;
-        });
-    }
+        }).join('');
     
-    modal.innerHTML = `
-        <div style="background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%); border-radius: 20px 20px 0 0; width: 100%; max-width: 100%; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15); position: fixed; bottom: 0; left: 0; animation: slideUp 0.3s ease-out;">
-            <!-- 頂部標題欄 -->
-            <div style="flex-shrink: 0; padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.08); background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.05));">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 24px;">📅</span>
-                        <span>${nextMonthName}預約扣款</span>
-                    </h2>
-                    <button class="next-month-close-btn" style="background: rgba(0,0,0,0.05); border: none; font-size: 24px; cursor: pointer; color: #666; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; flex-shrink: 0;">×</button>
+    panel.innerHTML = `
+        <div class="next-month-bills-header">
+            <div class="next-month-bills-header-bar">
+                <div class="next-month-bills-title">
+                    <span>📅</span>
+                    <span>${nextMonthName}預約扣款</span>
                 </div>
-                
-                <!-- 預算設定按鈕 -->
-                ${hasSetBudget ? `
-                    <div style="padding: 12px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1)); border-radius: 12px; border: 1px solid rgba(34, 197, 94, 0.3); margin-bottom: 8px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                            <div style="font-size: 11px; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                                <span>✓</span>
-                                <span>已設定下月預算</span>
-                            </div>
-                            <div style="font-size: 16px; font-weight: 700; color: #22c55e;">NT$${setBudgetAmount.toLocaleString('zh-TW')}</div>
-                        </div>
-                        <div style="font-size: 10px; color: var(--text-tertiary);">將在 ${nextMonthName} 自動生效</div>
-                    </div>
-                ` : ''}
-                <button class="set-next-month-budget-btn" data-category="${categoryName}" data-next-month-year="${nextMonthYear}" data-next-month-num="${nextMonthNum}" data-total-amount="${totalAmount}" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
-                    <span style="font-size: 18px;">💰</span>
-                    <span>${hasSetBudget ? '修改下月卡費預算' : '設定下月卡費預算'}</span>
-                </button>
+                <button class="next-month-close-btn" type="button">×</button>
             </div>
-            
-            <!-- 扣款明細列表 -->
-            <div style="flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch;">
-                <div style="margin-bottom: 12px; font-size: 13px; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
-                    <span>📋</span>
-                    <span>扣款明細</span>
-                </div>
-                ${billsHtml}
-            </div>
-            
-            <!-- 底部提示 -->
-            <div style="flex-shrink: 0; padding: 16px; border-top: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.9);">
-                <div style="padding: 12px; background: rgba(102, 126, 234, 0.05); border-radius: 10px; border: 1px solid rgba(102, 126, 234, 0.15);">
-                    <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5; display: flex; gap: 8px;">
-                        <span style="flex-shrink: 0;">💡</span>
-                        <span>這些是您標記為「下月扣款」的卡費記錄，不會計入本月預算統計。</span>
+            ${hasSetBudget ? `
+                <div class="next-month-budget-card">
+                    <div class="label">
+                        <span>✓</span>
+                        <span>已設定下月預算</span>
                     </div>
+                    <div class="value">NT$${setBudgetAmount.toLocaleString('zh-TW')}</div>
+                    <div class="hint">將在 ${nextMonthName} 自動生效</div>
                 </div>
+            ` : ''}
+            <button class="set-next-month-budget-btn" data-category="${categoryName}" data-next-month-year="${nextMonthYear}" data-next-month-num="${nextMonthNum}" data-total-amount="${totalAmount}" type="button">
+                <span>💰</span>
+                <span>${hasSetBudget ? '修改下月卡費預算' : '設定下月卡費預算'}</span>
+            </button>
+        </div>
+        <div class="next-month-bills-list">
+            <div class="next-month-bills-list-title">
+                <span>📋</span>
+                <span>扣款明細</span>
+            </div>
+            ${billsHtml}
+        </div>
+        <div class="next-month-bills-footer">
+            <div class="next-month-bills-tip">
+                <span>💡</span>
+                <span>這些是您標記為「下月扣款」的卡費記錄，不會計入本月預算統計。</span>
             </div>
         </div>
-        
-        <style>
-            @keyframes slideUp {
-                from {
-                    transform: translateY(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateY(0);
-                    opacity: 1;
-                }
-            }
-        </style>
     `;
     
+    modal.appendChild(panel);
     document.body.appendChild(modal);
     
+    const closeModal = () => {
+        if (!document.body.contains(modal)) return;
+        panel.classList.add('closing');
+        setTimeout(() => {
+            if (document.body.contains(modal)) {
+                document.body.removeChild(modal);
+            }
+        }, 230);
+    };
+    
     // 綁定預算設定按鈕事件
-    const setBudgetBtn = modal.querySelector('.set-next-month-budget-btn');
+    const setBudgetBtn = panel.querySelector('.set-next-month-budget-btn');
     if (setBudgetBtn) {
-        setBudgetBtn.addEventListener('touchstart', () => {
-            setBudgetBtn.style.transform = 'scale(0.98)';
-            setBudgetBtn.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
-        });
-        setBudgetBtn.addEventListener('touchend', () => {
-            setBudgetBtn.style.transform = 'scale(1)';
-            setBudgetBtn.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
-        });
         setBudgetBtn.addEventListener('click', () => {
             const category = setBudgetBtn.dataset.category;
             const nextYear = parseInt(setBudgetBtn.dataset.nextMonthYear);
@@ -8130,13 +8117,7 @@ function showNextMonthBills(categoryName) {
     }
     
     // 綁定編輯按鈕事件
-    modal.querySelectorAll('.edit-next-month-bill-btn').forEach(btn => {
-        btn.addEventListener('touchstart', () => {
-            btn.style.background = 'rgba(102, 126, 234, 0.15)';
-        });
-        btn.addEventListener('touchend', () => {
-            btn.style.background = 'none';
-        });
+    panel.querySelectorAll('.edit-next-month-bill-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const recordId = btn.dataset.recordId;
@@ -8147,13 +8128,7 @@ function showNextMonthBills(categoryName) {
     });
     
     // 綁定刪除按鈕事件
-    modal.querySelectorAll('.delete-next-month-bill-btn').forEach(btn => {
-        btn.addEventListener('touchstart', () => {
-            btn.style.background = 'rgba(239, 68, 68, 0.15)';
-        });
-        btn.addEventListener('touchend', () => {
-            btn.style.background = 'none';
-        });
+    panel.querySelectorAll('.delete-next-month-bill-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const recordId = btn.dataset.recordId;
@@ -8164,67 +8139,17 @@ function showNextMonthBills(categoryName) {
     });
     
     // 關閉按鈕
-    const closeBtn = modal.querySelector('.next-month-close-btn');
-    closeBtn.addEventListener('touchstart', () => {
-        closeBtn.style.background = 'rgba(0, 0, 0, 0.1)';
-        closeBtn.style.transform = 'scale(0.95)';
-    });
-    closeBtn.addEventListener('touchend', () => {
-        closeBtn.style.background = 'rgba(0, 0, 0, 0.05)';
-        closeBtn.style.transform = 'scale(1)';
-    });
-    closeBtn.addEventListener('click', () => {
-        if (document.body.contains(modal)) {
-            // 添加關閉動畫
-            const content = modal.querySelector('div');
-            if (content) {
-                content.style.animation = 'slideDown 0.3s ease-out';
-                setTimeout(() => {
-                    if (document.body.contains(modal)) {
-                        document.body.removeChild(modal);
-                    }
-                }, 250);
-            } else {
-                document.body.removeChild(modal);
-            }
-        }
-    });
+    const closeBtn = panel.querySelector('.next-month-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
     
     // 點擊遮罩關閉
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-            if (document.body.contains(modal)) {
-                // 添加關閉動畫
-                const content = modal.querySelector('div');
-                if (content) {
-                    content.style.animation = 'slideDown 0.3s ease-out';
-                    setTimeout(() => {
-                        if (document.body.contains(modal)) {
-                            document.body.removeChild(modal);
-                        }
-                    }, 250);
-                } else {
-                    document.body.removeChild(modal);
-                }
-            }
+            closeModal();
         }
     });
-    
-    // 添加關閉動畫的 CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideDown {
-            from {
-                transform: translateY(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateY(100%);
-                opacity: 0;
-            }
-        }
-    `;
-    document.head.appendChild(style);
 }
 
 // 編輯下月卡費記錄
@@ -12026,6 +11951,38 @@ const themes = [
         buttonIcon: '🐾',
         preview: 'linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(230, 247, 255, 0.75) 100%), url("image/BMG.jpg") center/cover',
         color: '#4dd0e1'
+    },
+    {
+        id: 'auroraflow',
+        name: '極光動態主題',
+        icon: '🌠',
+        buttonIcon: '🌠',
+        preview: 'linear-gradient(135deg, #0f172a 0%, #2563eb 35%, #34d399 70%, #a855f7 100%)',
+        color: '#34d399'
+    },
+    {
+        id: 'meteor',
+        name: '流星動態主題',
+        icon: '☄️',
+        buttonIcon: '☄️',
+        preview: 'linear-gradient(135deg, #020617 0%, #0f172a 45%, #1d4ed8 100%)',
+        color: '#60a5fa'
+    },
+    {
+        id: 'cyber',
+        name: '霓虹動態主題',
+        icon: '⚡',
+        buttonIcon: '⚡',
+        preview: 'linear-gradient(135deg, #050816 0%, #0f172a 35%, #00f5ff 70%, #ff2d95 100%)',
+        color: '#00f5ff'
+    },
+    {
+        id: 'sunrise',
+        name: '晨曦動態主題',
+        icon: '🌅',
+        buttonIcon: '🌅',
+        preview: 'linear-gradient(135deg, #140f26 0%, #f472b6 40%, #facc15 100%)',
+        color: '#f97316'
     }
 ];
 
@@ -12299,17 +12256,6 @@ function updateThemeButtons(themeId) {
         mint: {
             fab: '🍃',
             navLedger: '🍃',
-            navWallet: '💶',
-            navInvestment: '📉',
-            navChart: '📊',
-            navSettings: '⚙️'
-        },
-        coffee: {
-            fab: '☕',
-            navLedger: '☕',
-            navWallet: '💰',
-            navInvestment: '📈',
-            navChart: '📊',
             navSettings: '⚙️'
         },
         peach: {
@@ -12323,6 +12269,38 @@ function updateThemeButtons(themeId) {
         mono: {
             fab: '⚫',
             navLedger: '⚫',
+            navWallet: '💰',
+            navInvestment: '📈',
+            navChart: '📊',
+            navSettings: '⚙️'
+        },
+        auroraflow: {
+            fab: '🌠',
+            navLedger: '🌈',
+            navWallet: '💎',
+            navInvestment: '🚀',
+            navChart: '📊',
+            navSettings: '⚙️'
+        },
+        meteor: {
+            fab: '☄️',
+            navLedger: '☄️',
+            navWallet: '💫',
+            navInvestment: '🌠',
+            navChart: '🔭',
+            navSettings: '⚙️'
+        },
+        cyber: {
+            fab: '⚡',
+            navLedger: '⚡',
+            navWallet: '💾',
+            navInvestment: '🛰️',
+            navChart: '📟',
+            navSettings: '🛠️'
+        },
+        sunrise: {
+            fab: '🌅',
+            navLedger: '🌄',
             navWallet: '💰',
             navInvestment: '📈',
             navChart: '📊',
@@ -12684,7 +12662,6 @@ function applyCustomTheme() {
 function showThemeSelector() {
     const modal = document.createElement('div');
     modal.className = 'theme-select-modal';
-    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10005; display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: 20px;';
     
     const currentTheme = getCurrentTheme();
     const customTheme = getCustomTheme();
@@ -12701,95 +12678,141 @@ function showThemeSelector() {
         chartColor4: customTheme.chartColors?.[3] || '#ff1493',
         chartColor5: customTheme.chartColors?.[4] || '#db7093'
     };
-    
+
     modal.innerHTML = `
-        <div class="theme-custom-content" style="background: white; border-radius: 20px; padding: 24px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                <h2 style="font-size: 24px; font-weight: 600; color: var(--text-primary); margin: 0;">🎨 主題自訂</h2>
-                <button class="theme-close-btn" style="background: none; border: none; font-size: 24px; color: var(--text-tertiary); cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); transition: all var(--transition-fast);">✕</button>
+        <div class="theme-custom-content modal-content-standard">
+            <div class="theme-modal-header">
+                <div class="theme-modal-title">🎨 主題</div>
+                <button class="theme-close-btn" type="button" aria-label="Close">✕</button>
             </div>
-            
-            <div style="margin-bottom: 24px;">
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">預設主題</div>
-                <div class="theme-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-bottom: 24px;">
-                    ${themes.map(theme => {
-                        const isSelected = theme.id === currentTheme && !customTheme.primaryColor;
-                        return `
-                            <div class="theme-item ${isSelected ? 'selected' : ''}" data-theme-id="${theme.id}" style="cursor: pointer; border: 2px solid ${isSelected ? '#ff69b4' : '#e0e0e0'}; border-radius: 12px; padding: 12px; text-align: center; transition: all 0.2s;">
-                                <div style="width: 100%; height: 60px; background: ${theme.preview}; border-radius: 8px; margin-bottom: 8px;"></div>
-                                <div style="font-size: 20px;">${theme.icon}</div>
-                                <div style="font-size: 12px; color: #666; margin-top: 4px;">${theme.name}</div>
-                                ${isSelected ? '<div style="margin-top: 4px; color: #ff69b4; font-weight: bold;">✓</div>' : ''}
-                            </div>
-                        `;
-                    }).join('')}
+
+            <div class="theme-section">
+                <div class="theme-section-title">主題</div>
+                <div class="theme-toolbar">
+                    <input id="themeSearchInput" class="theme-search-input" type="text" placeholder="搜尋主題..." autocomplete="off" />
                 </div>
+                <div id="themeGrid" class="theme-grid theme-grid--auto"></div>
             </div>
-            
-            <div style="border-top: 1px solid #e0e0e0; padding-top: 24px; margin-bottom: 24px;">
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">自訂顏色</div>
-                
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-size: 14px; color: #666; margin-bottom: 8px;">主色調（按鈕、邊框）</label>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <input type="color" id="primaryColorPicker" value="${defaultColors.primaryColor}" style="width: 60px; height: 40px; border: none; border-radius: 8px; cursor: pointer;">
-                        <input type="text" id="primaryColorText" value="${defaultColors.primaryColor}" style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-size: 14px; color: #666; margin-bottom: 8px;">框的背景顏色</label>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <input type="color" id="boxColorPicker" value="${defaultColors.boxColor}" style="width: 60px; height: 40px; border: none; border-radius: 8px; cursor: pointer;">
-                        <input type="text" id="boxColorText" value="${defaultColors.boxColor}" style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-size: 14px; color: #666; margin-bottom: 8px;">背景顏色</label>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <input type="color" id="backgroundColorPicker" value="#ffeef5" style="width: 60px; height: 40px; border: none; border-radius: 8px; cursor: pointer;">
-                        <input type="text" id="backgroundColorText" value="${defaultColors.backgroundColor}" placeholder="例如: #ffeef5 或 linear-gradient(...)" style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
-                    </div>
-                    <div style="font-size: 12px; color: #999; margin-top: 4px;">支援顏色代碼或漸層（linear-gradient）</div>
-                </div>
-            </div>
-            
-            <div style="border-top: 1px solid #e0e0e0; padding-top: 24px; margin-bottom: 24px;">
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">圖表顏色</div>
-                ${[1, 2, 3, 4, 5].map(i => `
-                    <div style="margin-bottom: 12px;">
-                        <label style="display: block; font-size: 14px; color: #666; margin-bottom: 8px;">圖表顏色 ${i}</label>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <input type="color" id="chartColor${i}Picker" value="${defaultColors[`chartColor${i}`]}" style="width: 60px; height: 40px; border: none; border-radius: 8px; cursor: pointer;">
-                            <input type="text" id="chartColor${i}Text" value="${defaultColors[`chartColor${i}`]}" style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+
+            <div class="theme-section theme-section--divider">
+                <div class="theme-section-title">自訂顏色</div>
+
+                <div class="theme-form">
+                    <div class="theme-field">
+                        <label class="theme-label">主色調（按鈕、邊框）</label>
+                        <div class="theme-field-row">
+                            <input type="color" id="primaryColorPicker" value="${defaultColors.primaryColor}" class="theme-color-picker">
+                            <input type="text" id="primaryColorText" value="${defaultColors.primaryColor}" class="theme-text-input">
                         </div>
                     </div>
-                `).join('')}
-            </div>
-            
-            <div style="border-top: 1px solid #e0e0e0; padding-top: 24px; margin-bottom: 24px;">
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">背景圖片</div>
-                <div style="margin-bottom: 12px;">
-                    <input type="file" id="backgroundImageInput" accept="image/*" style="display: none;">
-                    <button id="uploadImageBtn" style="width: 100%; padding: 12px; background: var(--color-primary); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">📷 上傳背景圖片</button>
+
+                    <div class="theme-field">
+                        <label class="theme-label">框的背景顏色</label>
+                        <div class="theme-field-row">
+                            <input type="color" id="boxColorPicker" value="${defaultColors.boxColor}" class="theme-color-picker">
+                            <input type="text" id="boxColorText" value="${defaultColors.boxColor}" class="theme-text-input">
+                        </div>
+                    </div>
+
+                    <div class="theme-field">
+                        <label class="theme-label">背景顏色</label>
+                        <div class="theme-field-row">
+                            <input type="color" id="backgroundColorPicker" value="#ffeef5" class="theme-color-picker">
+                            <input type="text" id="backgroundColorText" value="${defaultColors.backgroundColor}" placeholder="例如: #ffeef5 或 linear-gradient(...)" class="theme-text-input">
+                        </div>
+                        <div class="theme-help">支援顏色代碼或漸層（linear-gradient）</div>
+                    </div>
                 </div>
+            </div>
+
+            <div class="theme-section theme-section--divider">
+                <div class="theme-section-title">圖表顏色</div>
+                <div class="theme-form">
+                    ${[1, 2, 3, 4, 5].map(i => `
+                        <div class="theme-field">
+                            <label class="theme-label">圖表顏色 ${i}</label>
+                            <div class="theme-field-row">
+                                <input type="color" id="chartColor${i}Picker" value="${defaultColors[`chartColor${i}`]}" class="theme-color-picker">
+                                <input type="text" id="chartColor${i}Text" value="${defaultColors[`chartColor${i}`]}" class="theme-text-input">
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="theme-section theme-section--divider">
+                <div class="theme-section-title">背景圖片</div>
+                <input type="file" id="backgroundImageInput" accept="image/*" style="display: none;">
+                <button id="uploadImageBtn" class="theme-primary-btn" type="button">📷 上傳背景圖片</button>
                 ${customTheme.backgroundImage ? `
-                    <div id="imagePreviewContainer" style="margin-top: 12px; position: relative;">
-                        <img src="${customTheme.backgroundImage}" alt="背景預覽" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px;">
-                        <button id="removeImageBtn" style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px;">✕</button>
+                    <div id="imagePreviewContainer" class="theme-image-preview">
+                        <img src="${customTheme.backgroundImage}" alt="背景預覽" class="theme-image-preview-img">
+                        <button id="removeImageBtn" class="theme-image-remove-btn" type="button">✕</button>
                     </div>
                 ` : '<div id="imagePreviewContainer"></div>'}
             </div>
-            
-            <div style="display: flex; gap: 12px; margin-top: 24px;">
-                <button id="resetThemeBtn" style="flex: 1; padding: 12px; background: #f5f5f5; color: #666; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">重置</button>
-                <button id="saveThemeBtn" style="flex: 2; padding: 12px; background: var(--color-primary); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">儲存設定</button>
+
+            <div class="theme-actions">
+                <button id="resetThemeBtn" class="theme-secondary-btn" type="button">重置</button>
+                <button id="saveThemeBtn" class="theme-primary-btn" type="button">儲存設定</button>
             </div>
         </div>
     `;
     
     document.body.appendChild(modal);
+
+    const renderThemeGrid = (query = '') => {
+        const q = (query || '').trim().toLowerCase();
+        const grid = document.getElementById('themeGrid');
+        if (!grid) return;
+
+        const list = themes.filter(t => {
+            if (!q) return true;
+            return (t.name || '').toLowerCase().includes(q) || (t.id || '').toLowerCase().includes(q);
+        });
+
+        grid.innerHTML = list.map(theme => {
+            const isSelected = theme.id === currentTheme && !customTheme.primaryColor;
+            return `
+                <div class="theme-item ${isSelected ? 'selected' : ''}" data-theme-id="${theme.id}">
+                    <div class="theme-item-preview" style="background: ${theme.preview};"></div>
+                    <div class="theme-item-content theme-item-content--compact">
+                        <div class="theme-item-icon">${theme.icon}</div>
+                        <div class="theme-item-name">${theme.name}</div>
+                        ${isSelected ? '<div class="theme-item-check">✓</div>' : '<div class="theme-item-check theme-item-check--placeholder"></div>'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        grid.querySelectorAll('.theme-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const themeId = item.dataset.themeId;
+                applyTheme(themeId);
+                saveCustomTheme({});
+                applyCustomTheme();
+
+                grid.querySelectorAll('.theme-item').forEach(t => t.classList.remove('selected'));
+                item.classList.add('selected');
+
+                setTimeout(() => {
+                    if (document.body.contains(modal)) {
+                        document.body.removeChild(modal);
+                    }
+                    alert('主題已切換！');
+                }, 300);
+            });
+        });
+    };
+
+    renderThemeGrid('');
+
+    const themeSearchInput = document.getElementById('themeSearchInput');
+    if (themeSearchInput) {
+        themeSearchInput.addEventListener('input', (e) => {
+            renderThemeGrid(e.target.value);
+        });
+    }
     
     // 綁定顏色選擇器同步
     const colorInputs = [
@@ -12858,26 +12881,6 @@ function showThemeSelector() {
             previewContainer.style.marginTop = '0';
         });
     }
-    
-    // 綁定預設主題選擇
-    modal.querySelectorAll('.theme-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const themeId = item.dataset.themeId;
-            applyTheme(themeId);
-            saveCustomTheme({}); // 清除自訂主題
-            applyCustomTheme(); // 重新應用
-            
-            modal.querySelectorAll('.theme-item').forEach(t => t.classList.remove('selected'));
-            item.classList.add('selected');
-            
-            setTimeout(() => {
-                if (document.body.contains(modal)) {
-                    document.body.removeChild(modal);
-                }
-                alert('主題已切換！');
-            }, 300);
-        });
-    });
     
     // 綁定儲存按鈕
     const saveBtn = document.getElementById('saveThemeBtn');
@@ -14029,6 +14032,17 @@ function showStockDetailPage(stockCode) {
         // 更新個股資訊
         document.getElementById('stockDetailName').textContent = stock.stockName;
         document.getElementById('stockDetailCode').textContent = stock.stockCode;
+        
+        // 更新查價連結
+        const quoteLink = document.getElementById('metricQuoteLink');
+        if (quoteLink) {
+            const quoteSite = quoteLink.dataset.site || 'cnyes';
+            let href = '#';
+            if (quoteSite === 'cnyes') {
+                href = `https://www.cnyes.com/twstock/${stock.stockCode}`;
+            }
+            quoteLink.href = href;
+        }
         
         // 更新關鍵數據
         const stockShares = stock.shares || 0;
