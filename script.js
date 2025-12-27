@@ -14042,6 +14042,19 @@ function showStockDetailPage(stockCode) {
                 href = `https://www.cnyes.com/twstock/${stock.stockCode}`;
             }
             quoteLink.href = href;
+
+            // 有些情況會被外層事件攔截或阻止預設跳轉，因此這裡明確綁定開新分頁
+            quoteLink.onclick = (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                if (!href || href === '#') {
+                    alert('請先選擇股票後再查價');
+                    return;
+                }
+                window.open(href, '_blank', 'noopener');
+            };
         }
         
         // 更新關鍵數據
