@@ -5,6 +5,46 @@ let clickAudio = null;
 let incomeAudio = null;
 let audioFailed = { click: false, income: false }; // 記錄失敗狀態，避免重複嘗試
 
+if (typeof window !== 'undefined' && typeof window.applyAutoWidth !== 'function') {
+    window.applyAutoWidth = function () {};
+}
+
+const DEFAULT_CATEGORY_IMAGES = {
+    '飲食': './image/13.png',
+    '外食 / 飲料': './image/14.png',
+    '交通': './image/15.png',
+    '住房物業': './image/16.png',
+    '水電瓦斯': './image/17.png',
+    '網路 / 電信': './image/18.png',
+    '購物': './image/19.png',
+    '投資理財': './image/19.png',
+    '醫療': './image/20.png',
+    '薪資': './image/21.png',
+    '投資收益': './image/21.png',
+    '轉帳': './image/6.png',
+    '銀行轉帳': './image/7.png',
+    '跨行轉帳': './image/8.png',
+    '電子支付轉帳': './image/9.png',
+    '帳戶間轉帳': './image/10.png',
+    '現金轉帳': './image/11.png',
+    '信用卡轉帳': './image/12.png'
+};
+
+function getDefaultCategoryImage(categoryName) {
+    return DEFAULT_CATEGORY_IMAGES[categoryName] || null;
+}
+
+function firstGrapheme(str) {
+    if (!str) return '';
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+        const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+        const it = seg.segment(str)[Symbol.iterator]();
+        const first = it.next().value;
+        return first ? first.segment : '';
+    }
+    return str.trim().slice(0, 2);
+}
+
 function formatMonthKey(dateObj) {
     const d = new Date(dateObj);
     if (Number.isNaN(d.getTime())) return '';
@@ -507,12 +547,17 @@ function initCategoryGrid(tabType = 'recommended', recordType = null) {
                     if (hasCustomIcon) {
                         iconHtml = `
                             <div class="category-icon-wrapper custom-icon-wrapper">
-                                <img src="${customIcons[category.name].value}" alt="${category.name}" class="category-icon-image">
+                                <img src="${customIcons[category.name].value}" alt="${category.name}" class="category-icon-image" onerror="this.outerHTML='<span class=&quot;category-icon&quot;>' + (this.getAttribute(&quot;data-fallback&quot;) || '📦') + '</span>'" data-fallback="${category.icon || '📦'}">
                                 <span class="custom-icon-badge">✨</span>
                             </div>
                         `;
                     } else {
-                        iconHtml = `<span class="category-icon">${category.icon}</span>`;
+                        const defaultImg = getDefaultCategoryImage(category.name);
+                        if (defaultImg) {
+                            iconHtml = `<img src="${defaultImg}" alt="${category.name}" class="category-icon-image" onerror="this.outerHTML='<span class=&quot;category-icon&quot;>' + (this.getAttribute(&quot;data-fallback&quot;) || '📦') + '</span>'" data-fallback="${category.icon || '📦'}">`;
+                        } else {
+                            iconHtml = `<span class="category-icon">${category.icon || '📦'}</span>`;
+                        }
                     }
                     
                     categoryItem.innerHTML = `
@@ -2808,6 +2853,253 @@ function initInvestmentTypeTabs() {
                 updateStockSelects();
             }
         });
+    });
+}
+
+function exportExpenseCategorySummaryCsv() {
+    const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+    const expenses = records.filter(r => r && (r.type === 'expense' || !r.type));
+
+    if (!expenses.length) {
+        alert('沒有找到支出記錄');
+        return;
+    }
+
+    const sums = new Map();
+    const counts = new Map();
+
+    expenses.forEach(r => {
+        const category = (r.category || '未分類').toString();
+        const amount = Number(String(r.amount ?? 0).replace(/,/g, '')) || 0;
+        sums.set(category, (sums.get(category) || 0) + amount);
+        counts.set(category, (counts.get(category) || 0) + 1);
+    });
+
+    const rows = Array.from(sums.entries())
+        .map(([category, total]) => ({ category, total, count: counts.get(category) || 0 }))
+        .sort((a, b) => b.total - a.total);
+
+    const escapeCsv = (v) => {
+        const s = (v ?? '').toString();
+        if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+        return s;
+    };
+
+    const header = ['分類', '總金額', '筆數'];
+    const lines = [header.map(escapeCsv).join(',')]
+        .concat(rows.map(r => [r.category, Math.round(r.total), r.count].map(escapeCsv).join(',')));
+
+    const csv = lines.join('\n');
+    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const filename = `expense_category_summary_${y}-${m}-${d}.csv`;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function getGoogleSheetUploadUrl() {
+    return (localStorage.getItem('googleSheetUploadUrl') || '').trim();
+}
+
+function setGoogleSheetUploadUrl() {
+    const current = getGoogleSheetUploadUrl();
+    const url = prompt('請輸入 Google Apps Script Web App URL（/exec）', current);
+    if (url == null) return;
+    const next = String(url).trim();
+    if (!next) {
+        localStorage.removeItem('googleSheetUploadUrl');
+        alert('已清除 Web App URL');
+        return;
+    }
+    localStorage.setItem('googleSheetUploadUrl', next);
+    alert('已儲存 Web App URL');
+}
+
+function buildAccountingRecordsTable(records) {
+    const header = [
+        'date',
+        'type',
+        'category',
+        'amount',
+        'note',
+        'account',
+        'member',
+        'emoji',
+        'isNextMonthBill',
+        'timestamp'
+    ];
+
+    const rows = records.map(r => {
+        const date = r?.date ?? '';
+        const type = r?.type ?? '';
+        const category = r?.category ?? '';
+        const amount = Number(String(r?.amount ?? 0).replace(/,/g, '')) || 0;
+        const note = r?.note ?? '';
+        const account = r?.account ?? '';
+        const member = r?.member ?? '';
+        const emoji = r?.emoji ?? '';
+        const isNextMonthBill = r?.isNextMonthBill ? 'true' : 'false';
+        const timestamp = r?.timestamp ?? '';
+        return [date, type, category, amount, note, account, member, emoji, isNextMonthBill, timestamp];
+    });
+
+    return [header, ...rows];
+}
+
+function uploadAllRecordsToGoogleSheet() {
+    uploadAllRecordsDetailsToGoogleSheet();
+}
+
+function uploadAllRecordsDetailsToGoogleSheet() {
+    const url = getGoogleSheetUploadUrl();
+    if (!url) {
+        alert('尚未設定 Web App URL');
+        setGoogleSheetUploadUrl();
+        return;
+    }
+
+    const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+    if (!records.length) {
+        alert('沒有找到任何記錄');
+        return;
+    }
+
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const sheetName = `Records-${y}-${m}-${d} ${hh}${mm}`;
+
+    const table = buildAccountingRecordsTable(records);
+    const payload = {
+        action: 'upload_table',
+        sheetName,
+        table
+    };
+
+    fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        alert(`已送出上傳，請到 Google Sheet 查看分頁：${sheetName}`);
+    }).catch((e) => {
+        alert('上傳失敗：' + (e && e.message ? e.message : e));
+    });
+}
+
+function maybeRemindMonthlyUpload() {
+    const now = new Date();
+    if (now.getDate() !== 20) return;
+
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const monthKey = `${y}-${m}`;
+    const storageKey = 'monthlyUploadReminderLastMonth';
+
+    const last = localStorage.getItem(storageKey);
+    if (last === monthKey) return;
+
+    localStorage.setItem(storageKey, monthKey);
+
+    const shouldGo = confirm('今天是每月20號，記得上傳本月記帳資料到 Google Sheet！\n\n要現在前往【設定】嗎？');
+    if (!shouldGo) return;
+    if (typeof showSettingsPage === 'function') {
+        showSettingsPage();
+        return;
+    }
+    const settingsNav = document.querySelector('.nav-item[data-page="settings"]');
+    if (settingsNav) settingsNav.click();
+}
+
+function buildIncomeExpenseCategorySummaryTable(records) {
+    const header = ['type', 'category', 'total_amount', 'count'];
+
+    const rowsByKey = new Map();
+    records.forEach(r => {
+        if (!r) return;
+        const type = r.type || 'expense';
+        if (type !== 'expense' && type !== 'income') return;
+        const category = (r.category || '未分類').toString();
+        const amount = Number(String(r.amount ?? 0).replace(/,/g, '')) || 0;
+        const key = `${type}__${category}`;
+        const cur = rowsByKey.get(key) || { type, category, total: 0, count: 0 };
+        cur.total += amount;
+        cur.count += 1;
+        rowsByKey.set(key, cur);
+    });
+
+    const rows = Array.from(rowsByKey.values())
+        .sort((a, b) => {
+            if (a.type !== b.type) return a.type.localeCompare(b.type);
+            return b.total - a.total;
+        })
+        .map(r => [r.type, r.category, Math.round(r.total), r.count]);
+
+    return [header, ...rows];
+}
+
+function uploadIncomeExpenseCategorySummaryToGoogleSheet() {
+    const url = getGoogleSheetUploadUrl();
+    if (!url) {
+        alert('尚未設定 Web App URL');
+        setGoogleSheetUploadUrl();
+        return;
+    }
+
+    const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+    if (!records.length) {
+        alert('沒有找到任何記錄');
+        return;
+    }
+
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const sheetName = `Summary-${y}-${m}-${d} ${hh}${mm}`;
+
+    const table = buildIncomeExpenseCategorySummaryTable(records);
+    if (table.length <= 1) {
+        alert('沒有找到收入/支出可加總的記錄');
+        return;
+    }
+
+    const payload = {
+        action: 'upload_table',
+        sheetName,
+        table
+    };
+
+    fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        alert(`已送出上傳，請到 Google Sheet 查看分頁：${sheetName}`);
+    }).catch((e) => {
+        alert('上傳失敗：' + (e && e.message ? e.message : e));
     });
 }
 
@@ -5820,7 +6112,12 @@ function getCategoryIcon(category) {
     // 檢查是否有自定義圖片圖標
     const customIcons = JSON.parse(localStorage.getItem('categoryCustomIcons') || '{}');
     if (customIcons[category] && customIcons[category].type === 'image') {
-        return `<img src="${customIcons[category].value}" alt="${category}" class="transaction-emoji-image">`;
+        return `<img src="${customIcons[category].value}" alt="${category}" class="transaction-emoji-image" onerror="this.outerHTML='📦'">`;
+    }
+
+    const defaultImg = getDefaultCategoryImage(category);
+    if (defaultImg) {
+        return `<img src="${defaultImg}" alt="${category}" class="transaction-emoji-image" onerror="this.outerHTML='📦'">`;
     }
     
     // 查找分類的默認圖標
@@ -7714,7 +8011,7 @@ function initDailyBudgetPage(categoryName = '生活費') {
         summaryCard.querySelectorAll('.summary-item--cta').forEach(btn => {
             btn.addEventListener('click', () => {
                 const cat = btn.dataset.category || '卡費';
-                showNextMonthBills(cat);
+                showNextMonthBillsPage(cat, 'pageDailyBudget');
             });
         });
     }
@@ -7802,9 +8099,34 @@ function showDailyDetail(categoryName, day, year, month) {
     const detailModal = document.createElement('div');
     detailModal.className = 'daily-detail-modal';
     detailModal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10006; display: flex; align-items: center; justify-content: center; padding: 20px;';
-    
+
+    let recordsTitleText = `記錄明細 (${dayRecords.length}筆)`;
     let recordsHtml = '';
-    if (dayRecords.length === 0) {
+    if (categoryName === '卡費') {
+        // 卡費：不在每日明細彈窗展開詳細，改為點擊後跳出「下月預約扣款」彈窗
+        const now = new Date();
+        const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const nextMonthYear = nextMonthDate.getFullYear();
+        const nextMonthNum = nextMonthDate.getMonth();
+        const nextMonthBills = records.filter(record => {
+            if (record.category !== '卡費') return false;
+            if (record.type !== 'expense' && record.type !== undefined) return false;
+            const recordDate = new Date(record.date);
+            return recordDate.getFullYear() === nextMonthYear &&
+                   recordDate.getMonth() === nextMonthNum &&
+                   record.isNextMonthBill === true;
+        });
+        const nextMonthTotal = nextMonthBills.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+        recordsTitleText = '卡費明細';
+        recordsHtml = `
+            <button class="summary-item summary-item--cta" type="button" data-category="卡費" style="width: 100%;">
+                <div class="summary-label">下月預約扣款</div>
+                <div class="summary-value highlight">NT$${nextMonthTotal.toLocaleString('zh-TW')}</div>
+                <div class="summary-cta-text">共 ${nextMonthBills.length} 筆 · 點擊查看</div>
+            </button>
+        `;
+    } else if (dayRecords.length === 0) {
         recordsHtml = '<div style="text-align: center; padding: 40px; color: var(--text-tertiary);">當天沒有記錄</div>';
     } else {
         dayRecords.forEach(record => {
@@ -7850,7 +8172,7 @@ function showDailyDetail(categoryName, day, year, month) {
                 </div>
             </div>
             
-            <div style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);">記錄明細 (${dayRecords.length}筆)</div>
+            <div style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary);">${recordsTitleText}</div>
             <div style="max-height: 400px; overflow-y: auto; margin-bottom: 16px;">
                 ${recordsHtml}
             </div>
@@ -7864,6 +8186,21 @@ function showDailyDetail(categoryName, day, year, month) {
     `;
     
     document.body.appendChild(detailModal);
+
+    // 卡費：綁定「下月預約扣款」按鈕
+    if (categoryName === '卡費') {
+        const ctaBtn = detailModal.querySelector('.summary-item--cta[data-category="卡費"]');
+        if (ctaBtn) {
+            ctaBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (document.body.contains(detailModal)) {
+                    document.body.removeChild(detailModal);
+                }
+                showNextMonthBillsPage('卡費', 'pageDailyBudget');
+            });
+        }
+    }
     
     // 快速記帳按鈕事件和樣式
     const quickAddBtn = detailModal.querySelector('.daily-detail-quick-add-btn');
@@ -8031,22 +8368,14 @@ function showNextMonthBills(categoryName) {
             const recordId = record.timestamp || record.id || '';
             const noteText = record.note && record.note !== '(下月帳單)' ? record.note.replace('(下月帳單)', '').trim() : '';
             return `
-                <div class="next-month-bill-item">
+                <div class="next-month-bill-item" data-record-id="${recordId}">
                     <div class="next-month-bill-main">
                         <div class="next-month-bill-icon">💳</div>
                         <div class="next-month-bill-info">
                             <div class="next-month-bill-date">${nextMonthNum + 1}月${day}日</div>
                             <div class="next-month-bill-note ${noteText ? '' : 'is-empty'}">${noteText || '無備註'}</div>
                         </div>
-                        <div class="next-month-bill-amount">NT$${(record.amount || 0).toLocaleString('zh-TW')}</div>
-                    </div>
-                    <div class="next-month-bill-actions">
-                        <button class="next-month-bill-btn next-month-bill-btn--edit edit-next-month-bill-btn" data-record-id="${recordId}" type="button">
-                            <span>✏️</span><span>編輯</span>
-                        </button>
-                        <button class="next-month-bill-btn next-month-bill-btn--delete delete-next-month-bill-btn" data-record-id="${recordId}" type="button">
-                            <span>🗑️</span><span>刪除</span>
-                        </button>
+                        <div class="next-month-bill-amount" data-record-id="${recordId}" title="點金額可刪除">NT$${(record.amount || 0).toLocaleString('zh-TW')}</div>
                     </div>
                 </div>
             `;
@@ -8115,26 +8444,24 @@ function showNextMonthBills(categoryName) {
             setNextMonthBudget(category, nextYear, nextMonth, currentTotal, modal);
         });
     }
-    
-    // 綁定編輯按鈕事件
-    panel.querySelectorAll('.edit-next-month-bill-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const recordId = btn.dataset.recordId;
-            if (recordId) {
-                editNextMonthBill(recordId, categoryName, modal);
-            }
+
+    // 點擊項目：開啟詳細彈窗（彈窗內再提供編輯/刪除）
+    panel.querySelectorAll('.next-month-bill-item[data-record-id]').forEach(item => {
+        item.addEventListener('click', () => {
+            const recordId = item.dataset.recordId;
+            if (!recordId) return;
+            showNextMonthBillDetail(recordId, categoryName, modal);
         });
     });
-    
-    // 綁定刪除按鈕事件
-    panel.querySelectorAll('.delete-next-month-bill-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+
+    // 點金額：直接開刪除彈窗（不顯示詳細）
+    panel.querySelectorAll('.next-month-bill-amount[data-record-id]').forEach(amountEl => {
+        amountEl.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
-            const recordId = btn.dataset.recordId;
-            if (recordId) {
-                deleteNextMonthBill(recordId, categoryName, modal);
-            }
+            const recordId = amountEl.dataset.recordId;
+            if (!recordId) return;
+            showNextMonthBillDeleteOnlyModal(recordId, categoryName, modal);
         });
     });
     
@@ -8150,6 +8477,313 @@ function showNextMonthBills(categoryName) {
             closeModal();
         }
     });
+}
+
+function renderNextMonthBillsPage(categoryName) {
+    const container = document.getElementById('nextMonthBillsPageContent');
+    if (!container) return;
+
+    const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+    const now = new Date();
+    const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const nextMonthYear = nextMonthDate.getFullYear();
+    const nextMonthNum = nextMonthDate.getMonth();
+    const nextMonthName = `${nextMonthYear}年${nextMonthNum + 1}月`;
+
+    const titleEl = document.getElementById('nextMonthBillsPageTitle');
+    if (titleEl) titleEl.textContent = `${nextMonthName}預約扣款`;
+
+    const nextMonthBills = records
+        .filter(record => {
+            if (record.category !== categoryName) return false;
+            if (record.type !== 'expense' && record.type !== undefined) return false;
+            const recordDate = new Date(record.date);
+            return recordDate.getFullYear() === nextMonthYear &&
+                   recordDate.getMonth() === nextMonthNum &&
+                   record.isNextMonthBill === true;
+        })
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const totalAmount = nextMonthBills.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+    if (!nextMonthBills.length) {
+        container.innerHTML = '<div class="next-month-bills-empty">沒有下月預約扣款</div>';
+        return;
+    }
+
+    const headerHtml = `
+        <div class="nmb-hero" data-category="${categoryName}" data-next-year="${nextMonthYear}" data-next-month-num="${nextMonthNum}" data-total-amount="${totalAmount}">
+            <div class="nmb-hero-top">
+                <div class="nmb-hero-title">
+                    <span class="nmb-hero-badge">${nextMonthName}</span>
+                    <span class="nmb-hero-subtitle">${categoryName} 預約扣款</span>
+                </div>
+                <button class="nmb-hero-btn" type="button" data-action="refresh">重新整理</button>
+            </div>
+
+            <div class="nmb-hero-metrics">
+                <div class="nmb-metric">
+                    <div class="nmb-metric-label">合計</div>
+                    <div class="nmb-metric-value">NT$${totalAmount.toLocaleString('zh-TW')}</div>
+                </div>
+                <div class="nmb-metric">
+                    <div class="nmb-metric-label">筆數</div>
+                    <div class="nmb-metric-value">${nextMonthBills.length}</div>
+                </div>
+            </div>
+
+            <div class="nmb-hero-actions">
+                ${categoryName === '卡費' ? '<button class="nmb-action" type="button" data-action="setBudget">設定卡費預算</button>' : ''}
+                <button class="nmb-action nmb-action--secondary" type="button" data-action="back">返回</button>
+            </div>
+        </div>
+        <div class="nmb-section-title">扣款明細</div>
+    `;
+
+    const billsHtml = nextMonthBills.map(record => {
+        const recordDate = new Date(record.date);
+        const day = recordDate.getDate();
+        const recordId = record.timestamp || record.id || '';
+        const noteText = record.note && record.note !== '(下月帳單)' ? record.note.replace('(下月帳單)', '').trim() : '';
+        return `
+            <div class="next-month-bill-item" data-record-id="${recordId}">
+                <div class="next-month-bill-main">
+                    <div class="next-month-bill-icon">💳</div>
+                    <div class="next-month-bill-info">
+                        <div class="next-month-bill-date">${nextMonthNum + 1}月${day}日</div>
+                        <div class="next-month-bill-note ${noteText ? '' : 'is-empty'}">${noteText || '無備註'}</div>
+                    </div>
+                    <div class="next-month-bill-amount" data-record-id="${recordId}" title="點金額可刪除">NT$${(record.amount || 0).toLocaleString('zh-TW')}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = headerHtml + billsHtml;
+
+    const hero = container.querySelector('.nmb-hero');
+    if (hero) {
+        const refreshBtn = hero.querySelector('[data-action="refresh"]');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                renderNextMonthBillsPage(categoryName);
+            });
+        }
+
+        const backBtn = hero.querySelector('[data-action="back"]');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                closeNextMonthBillsPage();
+            });
+        }
+
+        const setBudgetBtn = hero.querySelector('[data-action="setBudget"]');
+        if (setBudgetBtn) {
+            setBudgetBtn.addEventListener('click', () => {
+                const nextYear = parseInt(hero.dataset.nextYear, 10);
+                const nextMonth = parseInt(hero.dataset.nextMonthNum, 10);
+                const currentTotal = parseFloat(hero.dataset.totalAmount);
+                setNextMonthBudget(categoryName, nextYear, nextMonth, currentTotal, null);
+            });
+        }
+    }
+
+    // 點擊項目：開啟詳細彈窗（彈窗內再提供編輯/刪除）
+    container.querySelectorAll('.next-month-bill-item[data-record-id]').forEach(item => {
+        item.addEventListener('click', () => {
+            const recordId = item.dataset.recordId;
+            if (!recordId) return;
+            showNextMonthBillDetail(recordId, categoryName, null);
+        });
+    });
+
+    // 點金額：直接開刪除彈窗（不顯示詳細）
+    container.querySelectorAll('.next-month-bill-amount[data-record-id]').forEach(amountEl => {
+        amountEl.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const recordId = amountEl.dataset.recordId;
+            if (!recordId) return;
+            showNextMonthBillDeleteOnlyModal(recordId, categoryName, null);
+        });
+    });
+}
+
+function showNextMonthBillsPage(categoryName = '卡費', returnPageId = '') {
+    const pageNextMonthBills = document.getElementById('pageNextMonthBills');
+    if (!pageNextMonthBills) return;
+
+    const pageDailyBudget = document.getElementById('pageDailyBudget');
+    const pageBudget = document.getElementById('pageBudget');
+    const pageSettings = document.getElementById('pageSettings');
+    const pageLedger = document.getElementById('pageLedger');
+    const pageChart = document.getElementById('pageChart');
+    const pageInvestment = document.getElementById('pageInvestment');
+    const pageInput = document.getElementById('pageInput');
+    const inputSection = document.getElementById('inputSection');
+    const bottomNav = document.querySelector('.bottom-nav');
+
+    // 記錄返回頁面
+    if (returnPageId) {
+        window.nextMonthBillsReturnPageId = returnPageId;
+    } else if (pageDailyBudget && pageDailyBudget.style.display !== 'none') {
+        window.nextMonthBillsReturnPageId = 'pageDailyBudget';
+    } else if (pageBudget && pageBudget.style.display !== 'none') {
+        window.nextMonthBillsReturnPageId = 'pageBudget';
+    } else {
+        window.nextMonthBillsReturnPageId = 'pageLedger';
+    }
+
+    // 隱藏其他頁面
+    if (pageInput) pageInput.style.display = 'none';
+    if (pageLedger) pageLedger.style.display = 'none';
+    if (inputSection) inputSection.style.display = 'none';
+    if (pageChart) pageChart.style.display = 'none';
+    if (pageBudget) pageBudget.style.display = 'none';
+    if (pageSettings) pageSettings.style.display = 'none';
+    if (pageInvestment) pageInvestment.style.display = 'none';
+    if (pageDailyBudget) pageDailyBudget.style.display = 'none';
+
+    pageNextMonthBills.style.display = 'block';
+    if (bottomNav) bottomNav.style.display = 'none';
+
+    window.nextMonthBillsPageCategoryName = categoryName;
+    renderNextMonthBillsPage(categoryName);
+}
+
+function closeNextMonthBillsPage() {
+    const pageNextMonthBills = document.getElementById('pageNextMonthBills');
+    if (pageNextMonthBills) pageNextMonthBills.style.display = 'none';
+
+    const returnId = window.nextMonthBillsReturnPageId || 'pageLedger';
+    const returnEl = document.getElementById(returnId);
+    if (returnEl) returnEl.style.display = 'block';
+
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) {
+        // dailyBudget / nextMonthBills 頁面都不顯示底部導航
+        bottomNav.style.display = (returnId === 'pageLedger' || returnId === 'pageChart' || returnId === 'pageBudget' || returnId === 'pageSettings') ? 'flex' : 'none';
+    }
+}
+
+function showNextMonthBillDetail(recordId, categoryName, parentModal) {
+    const allRecords = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+    const record = allRecords.find(r => (r.timestamp || r.id) === recordId);
+    if (!record) {
+        alert('找不到該記錄');
+        return;
+    }
+
+    const recordDate = new Date(record.date);
+    const noteText = record.note && record.note !== '(下月帳單)' ? record.note.replace('(下月帳單)', '').trim() : '';
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10006; display: flex; align-items: center; justify-content: center; padding: 16px;';
+
+    modal.innerHTML = `
+        <div class="modal-content-standard" style="width: 100%; max-width: 420px;">
+            <div style="display:flex; align-items:center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+                <div style="font-size: 16px; font-weight: 700;">下月扣款明細</div>
+                <button class="modal-close-btn" type="button" style="background:none;border:none;font-size:22px;cursor:pointer;">✕</button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap: 10px;">
+                <div><strong>日期：</strong>${recordDate.getFullYear()}年${recordDate.getMonth() + 1}月${recordDate.getDate()}日</div>
+                <div><strong>分類：</strong>${record.category || ''}</div>
+                <div><strong>金額：</strong>NT$${(record.amount || 0).toLocaleString('zh-TW')}</div>
+                <div><strong>備註：</strong>${noteText || '無'}</div>
+            </div>
+            <div style="display:flex; gap: 12px; margin-top: 18px;">
+                <button class="next-month-bill-btn next-month-bill-btn--edit" type="button" data-action="edit" style="flex: 1; justify-content: center;">✏️ 編輯</button>
+                <button class="next-month-bill-btn next-month-bill-btn--delete" type="button" data-action="delete" style="flex: 1; justify-content: center;">🗑️ 刪除</button>
+            </div>
+        </div>
+    `;
+
+    const close = () => {
+        if (document.body.contains(modal)) document.body.removeChild(modal);
+    };
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+
+    const closeBtn = modal.querySelector('.modal-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', close);
+
+    const editBtn = modal.querySelector('[data-action="edit"]');
+    if (editBtn) {
+        editBtn.addEventListener('click', () => {
+            close();
+            editNextMonthBill(recordId, categoryName, parentModal);
+        });
+    }
+
+    const deleteBtn = modal.querySelector('[data-action="delete"]');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+            close();
+            deleteNextMonthBill(recordId, categoryName, parentModal);
+        });
+    }
+
+    document.body.appendChild(modal);
+}
+
+function showNextMonthBillDeleteOnlyModal(recordId, categoryName, parentModal) {
+    const allRecords = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+    const record = allRecords.find(r => (r.timestamp || r.id) === recordId);
+    if (!record) {
+        alert('找不到該記錄');
+        return;
+    }
+
+    const recordDate = new Date(record.date);
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10006; display: flex; align-items: center; justify-content: center; padding: 16px;';
+
+    modal.innerHTML = `
+        <div class="modal-content-standard" style="width: 100%; max-width: 420px;">
+            <div style="display:flex; align-items:center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+                <div style="font-size: 16px; font-weight: 700;">刪除下月扣款？</div>
+                <button class="modal-close-btn" type="button" style="background:none;border:none;font-size:22px;cursor:pointer;">✕</button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap: 10px;">
+                <div><strong>日期：</strong>${recordDate.getFullYear()}年${recordDate.getMonth() + 1}月${recordDate.getDate()}日</div>
+                <div><strong>金額：</strong>NT$${(record.amount || 0).toLocaleString('zh-TW')}</div>
+            </div>
+            <div style="display:flex; gap: 12px; margin-top: 18px;">
+                <button class="next-month-bill-btn" type="button" data-action="cancel" style="flex: 1; justify-content: center;">取消</button>
+                <button class="next-month-bill-btn next-month-bill-btn--delete" type="button" data-action="delete" style="flex: 1; justify-content: center;">🗑️ 刪除</button>
+            </div>
+        </div>
+    `;
+
+    const close = () => {
+        if (document.body.contains(modal)) document.body.removeChild(modal);
+    };
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+
+    const closeBtn = modal.querySelector('.modal-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', close);
+
+    const cancelBtn = modal.querySelector('[data-action="cancel"]');
+    if (cancelBtn) cancelBtn.addEventListener('click', close);
+
+    const deleteBtn = modal.querySelector('[data-action="delete"]');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+            close();
+            deleteNextMonthBill(recordId, categoryName, parentModal);
+        });
+    }
+
+    document.body.appendChild(modal);
 }
 
 // 編輯下月卡費記錄
@@ -8208,11 +8842,16 @@ function editNextMonthBill(recordId, categoryName, parentModal) {
         initDailyBudgetPage(categoryName);
     }
     
-    // 關閉並重新開啟下月扣款視窗
+    // 重新整理顯示
     if (parentModal && document.body.contains(parentModal)) {
         document.body.removeChild(parentModal);
+        showNextMonthBills(categoryName);
+    } else {
+        const pageNextMonthBills = document.getElementById('pageNextMonthBills');
+        if (pageNextMonthBills && pageNextMonthBills.style.display !== 'none') {
+            renderNextMonthBillsPage(categoryName);
+        }
     }
-    showNextMonthBills(categoryName);
     
     alert('編輯成功！');
 }
@@ -8253,25 +8892,29 @@ function deleteNextMonthBill(recordId, categoryName, parentModal) {
         initDailyBudgetPage(categoryName);
     }
     
-    // 關閉並重新開啟下月扣款視窗（如果還有記錄的話）
     if (parentModal && document.body.contains(parentModal)) {
         document.body.removeChild(parentModal);
-    }
-    
-    // 檢查是否還有下月記錄
-    const remainingRecords = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
-    const now = new Date();
-    const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const hasNextMonthBills = remainingRecords.some(r => {
-        if (r.category !== categoryName) return false;
-        const rDate = new Date(r.date);
-        return rDate.getFullYear() === nextMonthDate.getFullYear() && 
-               rDate.getMonth() === nextMonthDate.getMonth() &&
-               r.isNextMonthBill === true;
-    });
-    
-    if (hasNextMonthBills) {
-        showNextMonthBills(categoryName);
+
+        // 檢查是否還有下月記錄
+        const remainingRecords = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+        const now = new Date();
+        const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const hasNextMonthBills = remainingRecords.some(r => {
+            if (r.category !== categoryName) return false;
+            const rDate = new Date(r.date);
+            return rDate.getFullYear() === nextMonthDate.getFullYear() && 
+                   rDate.getMonth() === nextMonthDate.getMonth() &&
+                   r.isNextMonthBill === true;
+        });
+        
+        if (hasNextMonthBills) {
+            showNextMonthBills(categoryName);
+        }
+    } else {
+        const pageNextMonthBills = document.getElementById('pageNextMonthBills');
+        if (pageNextMonthBills && pageNextMonthBills.style.display !== 'none') {
+            renderNextMonthBillsPage(categoryName);
+        }
     }
     
     alert('刪除成功！');
@@ -8713,7 +9356,7 @@ function showAddCategoryDialog(type = 'expense') {
                 <!-- Emoji 輸入 -->
                 <div style="margin-bottom: 12px;">
                     <label style="display: block; font-size: 13px; color: #666; margin-bottom: 6px;">或輸入其他 Emoji</label>
-                    <input type="text" id="categoryIconInput" class="category-modal-input" placeholder="例如：🍔 🚇 💰" maxlength="2" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 20px; text-align: center; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#ffb6d9'" onblur="this.style.borderColor='#e0e0e0'">
+                    <input type="text" id="categoryIconInput" class="category-modal-input" placeholder="例如：🍔 🚇 💰" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 20px; text-align: center; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#ffb6d9'" onblur="this.style.borderColor='#e0e0e0'">
                 </div>
                 
                 <!-- 或上傳圖片 -->
@@ -8794,18 +9437,16 @@ function showAddCategoryDialog(type = 'expense') {
             
             buttons.forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     const icon = btn.dataset.icon;
-                    console.log('點擊快速圖標:', icon);
                     iconInput.value = icon;
+                    iconPreview.textContent = icon;
                     selectedIconImage = null;
-                    iconPreview.innerHTML = `<span style="font-size: 40px;">${icon}</span>`;
                 });
             });
             
             console.log('✓ 快速圖標按鈕事件綁定完成');
-        }, 100);
+        }, 50);
     };
     
     // 類型選擇
@@ -8835,9 +9476,9 @@ function showAddCategoryDialog(type = 'expense') {
     // 初始渲染快速圖標
     renderQuickIcons(selectedType);
     
-    // Emoji 輸入時更新預覽
     iconInput.addEventListener('input', (e) => {
-        const icon = e.target.value.trim();
+        const icon = firstGrapheme(e.target.value);
+        e.target.value = icon;
         if (icon) {
             selectedIconImage = null; // 清除圖片
             iconPreview.innerHTML = `<span style="font-size: 40px;">${icon}</span>`;
@@ -8846,12 +9487,15 @@ function showAddCategoryDialog(type = 'expense') {
         }
     });
     
-    // 上傳圖片
     if (uploadBtn && fileInput) {
-        uploadBtn.addEventListener('click', () => {
+        const openPicker = () => {
             console.log('點擊上傳圖片按鈕');
+            fileInput.value = '';
             fileInput.click();
-        });
+        };
+
+        uploadBtn.addEventListener('click', openPicker);
+        uploadBtn.addEventListener('touchend', openPicker, { passive: true });
         
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -8969,7 +9613,7 @@ function showAddCategoryDialog(type = 'expense') {
         const iconInput = modal.querySelector('#categoryIconInput');
         
         const name = nameInput.value.trim();
-        const icon = iconInput.value.trim() || '📦';
+        const icon = firstGrapheme(iconInput.value) || '📦';
         
         if (!name) {
             alert('請輸入分類名稱');
@@ -9172,8 +9816,14 @@ function showCategoryIconEditor(categoryName) {
     const preview = modal.querySelector('#currentIconPreview');
     
     uploadBtn.addEventListener('click', () => {
+        fileInput.value = '';
         fileInput.click();
     });
+
+    uploadBtn.addEventListener('touchend', () => {
+        fileInput.value = '';
+        fileInput.click();
+    }, { passive: true });
     
     fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
@@ -9276,17 +9926,21 @@ function initSettingsPage() {
     if (!settingsList) return;
     
     const settings = [
-        { icon: '📊', title: '年度報告', action: 'annualReport' },
-        { icon: '🎨', title: '主題顏色', action: 'theme' },
-        { icon: '🔤', title: '字體大小', action: 'fontSize' },
-        { icon: '📚', title: '操作教學', action: 'tutorial' },
-        { icon: '🖼️', title: '圖示管理', action: 'iconManage' },
-        { icon: '🧾', title: '分期規則', action: 'installmentRules' },
-        { icon: '💾', title: '備份資料', action: 'backup' },
-        { icon: '📥', title: '還原資料', action: 'restore' },
-        { icon: '📊', title: '匯出資料', action: 'export' },
-        { icon: '📂', title: '匯入檔案', action: 'import' },
-        { icon: '👨‍💻', title: '創作者', action: 'creator' }
+        { icon: '📊', title: '年報', action: 'annualReport' },
+        { icon: '🎨', title: '主題', action: 'theme' },
+        { icon: '🔤', title: '字體', action: 'fontSize' },
+        { icon: '📚', title: '教學', action: 'tutorial' },
+        { icon: '🖼️', title: '圖示', action: 'iconManage' },
+        { icon: '🔗', title: 'Sheet 網址', action: 'setGoogleSheetUploadUrl' },
+        { icon: '☁️', title: '上傳明細', action: 'uploadAllRecordsDetailsToGoogleSheet' },
+        { icon: '🧮', title: '上傳加總', action: 'uploadIncomeExpenseCategorySummaryToGoogleSheet' },
+        { icon: '🧾', title: '分類加總 CSV', action: 'exportExpenseCategorySummary' },
+        { icon: '🧾', title: '分期', action: 'installmentRules' },
+        { icon: '💾', title: '備份', action: 'backup' },
+        { icon: '📥', title: '還原', action: 'restore' },
+        { icon: '📊', title: '匯出', action: 'export' },
+        { icon: '📂', title: '匯入', action: 'import' },
+        { icon: '👨‍💻', title: '關於', action: 'creator' }
     ];
     
     let html = '';
@@ -9312,6 +9966,14 @@ function initSettingsPage() {
             } else if (action === 'restore') {
                 // 還原資料
                 restoreData();
+            } else if (action === 'setGoogleSheetUploadUrl') {
+                setGoogleSheetUploadUrl();
+            } else if (action === 'uploadAllRecordsDetailsToGoogleSheet') {
+                uploadAllRecordsDetailsToGoogleSheet();
+            } else if (action === 'uploadIncomeExpenseCategorySummaryToGoogleSheet') {
+                uploadIncomeExpenseCategorySummaryToGoogleSheet();
+            } else if (action === 'exportExpenseCategorySummary') {
+                exportExpenseCategorySummaryCsv();
             } else if (action === 'export') {
                 // 匯出資料
                 exportData();
@@ -13292,6 +13954,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initMonthSwitchers();
 
+    // 每月20號提醒上傳（延遲避免干擾初始化流程）
+    setTimeout(() => {
+        if (typeof maybeRemindMonthlyUpload === 'function') {
+            maybeRemindMonthlyUpload();
+        }
+    }, 1500);
+
     // 檢查小森每日開啟對話
     setTimeout(() => {
         const allRecords = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
@@ -13348,6 +14017,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const investmentBackBtn = document.getElementById('investmentBackBtn');
     // 投資專區返回按鈕已刪除，只保留買入按鈕
+
+    const nextMonthBillsBackBtn = document.getElementById('nextMonthBillsBackBtn');
+    if (nextMonthBillsBackBtn) {
+        nextMonthBillsBackBtn.addEventListener('click', () => {
+            closeNextMonthBillsPage();
+        });
+    }
     
     // 默認顯示記帳本頁面
     const pageLedger = document.getElementById('pageLedger');
@@ -14062,18 +14738,66 @@ function showStockDetailPage(stockCode) {
         const stockAvgCost = stock.avgCost != null && stock.avgCost !== 0 ? stock.avgCost : 0;
         document.getElementById('metricShares').textContent = `${stockShares.toLocaleString('zh-TW')} 股`;
         document.getElementById('metricAvgCost').textContent = `NT$${stockAvgCost.toFixed(2)}`;
-        const currentPriceInput = document.getElementById('metricCurrentPrice');
+
+        const measureInputTextWidthPx = (inputEl, text) => {
+            try {
+                const style = window.getComputedStyle(inputEl);
+                const font = style.font || `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+                const canvas = measureInputTextWidthPx._canvas || (measureInputTextWidthPx._canvas = document.createElement('canvas'));
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return null;
+                ctx.font = font;
+                const metrics = ctx.measureText(text);
+                return metrics?.width ?? null;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const applyAutoWidth = (el) => {
+            if (!el) return;
+
+            const isMobile = window.matchMedia && window.matchMedia('(max-width: 576px)').matches;
+            if (isMobile) {
+                el.style.width = '100%';
+                return;
+            }
+
+            const value = (el.value ?? '').toString();
+            const wrapper = el.closest('.metric-price-wrapper');
+            const quoteBtn = document.getElementById('metricQuoteLink');
+
+            const textWidth = measureInputTextWidthPx(el, value || '0');
+            // 讓 input 內部留一些左右 padding 的空間（略大一點避免跳動）
+            const desired = (textWidth != null ? Math.ceil(textWidth) : 80) + 36;
+            const minW = 120;
+
+            let maxW = wrapper ? wrapper.clientWidth : 360;
+            if (wrapper && quoteBtn) {
+                const gap = 12;
+                maxW = Math.max(120, wrapper.clientWidth - quoteBtn.offsetWidth - gap);
+            }
+
+            const finalW = Math.max(minW, Math.min(desired, maxW));
+            el.style.width = `${finalW}px`;
+        };
+
+        let currentPriceInput = document.getElementById('metricCurrentPrice');
         if (currentPriceInput) {
+
             // 優先使用保存的當前價格，如果沒有則使用平均成本
             const savedPrice = getStockCurrentPrice(stockCode);
             const defaultPrice = savedPrice || stockAvgCost;
             currentPriceInput.value = (defaultPrice != null ? defaultPrice : 0).toFixed(2);
+
+            applyAutoWidth(currentPriceInput);
             
             // 自動獲取現價（如果今天沒有手動輸入的價格）
             if (!hasManualPriceToday(stockCode)) {
             fetchStockPrice(stockCode).then(price => {
                 if (price && currentPriceInput) {
                     currentPriceInput.value = price.toFixed(2);
+                    applyAutoWidth(currentPriceInput);
                     // 觸發 input 事件以更新未實現損益
                     currentPriceInput.dispatchEvent(new Event('input'));
                 } else if (stockCode.endsWith('B')) {
@@ -14111,8 +14835,14 @@ function showStockDetailPage(stockCode) {
             // 移除舊的事件監聽器（如果有的話）
             const newInput = currentPriceInput.cloneNode(true);
             currentPriceInput.parentNode.replaceChild(newInput, currentPriceInput);
+            currentPriceInput = newInput;
             
             newInput.addEventListener('input', () => {
+                if (typeof applyAutoWidth === 'function') {
+                    applyAutoWidth(newInput);
+                } else if (typeof window !== 'undefined' && typeof window.applyAutoWidth === 'function') {
+                    window.applyAutoWidth(newInput);
+                }
                 const currentPrice = parseFloat(newInput.value) || stockAvgCost;
                 const unrealizedPnl = (currentPrice - stockAvgCost) * stockShares;
                 const pnlEl = document.getElementById('metricUnrealizedPnl');
