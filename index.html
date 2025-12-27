@@ -511,6 +511,18 @@
         </div>
     </div>
 
+    <!-- 下月預約扣款頁面 -->
+    <div class="page-next-month-bills" id="pageNextMonthBills" style="display: none;">
+        <div class="next-month-bills-page-header">
+            <button class="back-btn" id="nextMonthBillsBackBtn">←</button>
+            <h2 class="next-month-bills-page-title" id="nextMonthBillsPageTitle">下月預約扣款</h2>
+        </div>
+
+        <div class="next-month-bills-page-content" id="nextMonthBillsPageContent">
+            <!-- 下月預約扣款內容將由 JavaScript 動態生成 -->
+        </div>
+    </div>
+
     <!-- 設定頁面 -->
     <div class="page-settings" id="pageSettings" style="display: none;">
         <div class="settings-header">
@@ -712,8 +724,8 @@
                     <div class="metric-label">現價</div>
                     <div class="metric-price-wrapper metric-price-wrapper--simple">
                         <input type="number" class="metric-input-large" id="metricCurrentPrice" placeholder="輸入現價" step="0.01">
-                        <a href="#" class="metric-quote-btn" id="metricQuoteLink" data-site="cnyes" target="_blank" rel="noopener noreferrer" title="查詢現價">
-                            查
+                        <a href="#" class="metric-quote-btn" id="metricQuoteLink" data-site="cnyes" target="_blank" rel="noopener noreferrer">
+                            鉅亨網查價
                         </a>
                     </div>
                 </div>
@@ -1410,7 +1422,7 @@
     <script src="js/storage.js"></script>
     <script src="js/advisor.js"></script>
     <!-- 主腳本（保留其他功能） -->
-    <script src="script.js?v=20251218_3"></script>
+    <script src="script.js?v=20251227_1"></script>
     <script src="searchHistoryInit.js" type="module"></script>
 </body>
 </html>
