@@ -13871,6 +13871,11 @@ function showFontSizeSelector() {
 document.addEventListener('DOMContentLoaded', () => {
     // 載入股票名稱映射表
     loadStockNames();
+
+    // 到期提醒：定期定額（日期到了主動詢問是否執行）
+    if (typeof checkAndExecuteDCAPlans === 'function') {
+        checkAndExecuteDCAPlans();
+    }
     
     // 應用保存的主題
     initTheme();
@@ -15746,8 +15751,16 @@ function showEditDividendRecordModal(record) {
                 <input type="text" id="editDividendStockCode" class="form-input" value="${record.stockCode || ''}" placeholder="例如: 2330">
             </div>
             <div class="form-field">
+                <label class="form-label">股票名稱（選填）</label>
+                <input type="text" id="editDividendStockName" class="form-input" value="${record.stockName || ''}" placeholder="例如: 台積電">
+            </div>
+            <div class="form-field">
                 <label class="form-label">股息日期</label>
                 <input type="date" id="editDividendDate" class="form-input" value="${record.date || ''}">
+            </div>
+            <div class="form-field">
+                <label class="form-label">除息日（選填）</label>
+                <input type="date" id="editDividendExDate" class="form-input" value="${record.exDividendDate || ''}">
             </div>
             <div class="form-field">
                 <label class="form-label">股息類型</label>
@@ -15759,6 +15772,10 @@ function showEditDividendRecordModal(record) {
             <div class="form-field">
                 <label class="form-label">每股金額</label>
                 <input type="number" id="editDividendPerShare" class="form-input" value="${record.perShare != null && record.perShare !== '' ? String(record.perShare) : ''}" step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="form-field">
+                <label class="form-label">歷史每股金額（選填）</label>
+                <input type="number" id="editDividendHistoricalPerShare" class="form-input" value="${record.historicalPerShare != null && record.historicalPerShare !== '' ? String(record.historicalPerShare) : ''}" step="0.01" min="0" placeholder="0.00">
             </div>
             <div class="form-field">
                 <label class="form-label">股數</label>
@@ -15849,6 +15866,7 @@ function showEditDividendRecordModal(record) {
     modal.querySelector('#editDividendSaveBtn').addEventListener('click', () => {
         playClickSound(); // 播放點擊音效
         const stockCode = document.getElementById('editDividendStockCode').value.trim();
+        const stockNameFromInput = document.getElementById('editDividendStockName')?.value?.trim() || '';
         const date = document.getElementById('editDividendDate').value;
         const dividendType = document.getElementById('editDividendType').value;
         const perShare = parseFloat(document.getElementById('editDividendPerShare').value);
@@ -15857,6 +15875,9 @@ function showEditDividendRecordModal(record) {
         const fee = parseFloat(document.getElementById('editDividendFee')?.value) || 0;
         const reinvest = document.getElementById('editDividendReinvest').checked;
         const note = document.getElementById('editDividendNote').value.trim();
+        const stockName = stockNameFromInput || (typeof findStockName === 'function' ? (findStockName(stockCode) || '') : '') || stockCode;
+        const historicalPerShare = parseFloat(document.getElementById('editDividendHistoricalPerShare')?.value) || null;
+        const exDividendDate = document.getElementById('editDividendExDate')?.value || '';
         
         if (!stockCode || !date || perShare <= 0 || shares <= 0 || amount <= 0) {
             alert('請填寫所有必填欄位');
@@ -15886,10 +15907,10 @@ function showEditDividendRecordModal(record) {
                 stockCode: stockCode,
                 stockName: stockName,
                 date: date,
-                exDividendDate: document.getElementById('dividendExDateInput')?.value || '',
-                dividendType: window.dividendType || 'cash',
+                exDividendDate: exDividendDate,
+                dividendType: dividendType || 'cash',
                 perShare: perShare,
-                historicalPerShare: parseFloat(document.getElementById('dividendHistoricalPerShareInput')?.value) || null,
+                historicalPerShare: historicalPerShare,
                 shares: shares,
                 amount: amount,
                 fee: fee,
@@ -16818,6 +16839,7 @@ function initDividendInput() {
     const stockNameInput = document.getElementById('dividendStockNameInput');
     const dateInput = document.getElementById('dividendDateInput');
     const perShareInput = document.getElementById('dividendPerShareInput');
+    const historicalPerShareInput = document.getElementById('dividendHistoricalPerShareInput');
     const sharesInput = document.getElementById('dividendSharesInput');
     const amountInput = document.getElementById('dividendAmountInput');
     const reinvestInput = document.getElementById('dividendReinvestInput');
@@ -16909,7 +16931,7 @@ function initDividendInput() {
                 
                 // 自動計算實收金額（如果已輸入每股股息）
                 const perShare = parseFloat(perShareInput?.value) || 0;
-        const historicalPerShare = parseFloat(historicalPerShareInput?.value) || null;
+                const historicalPerShare = parseFloat(historicalPerShareInput?.value) || null;
                 if (perShare > 0 && amountInput) {
                     const amount = perShare * stock.shares;
                     amountInput.value = amount.toFixed(2);
@@ -17036,6 +17058,7 @@ function saveDividendRecord() {
     const stockNameInput = document.getElementById('dividendStockNameInput');
     const dateInput = document.getElementById('dividendDateInput');
     const perShareInput = document.getElementById('dividendPerShareInput');
+    const historicalPerShareInput = document.getElementById('dividendHistoricalPerShareInput');
     const sharesInput = document.getElementById('dividendSharesInput');
     const amountInput = document.getElementById('dividendAmountInput');
     const feeInput = document.getElementById('dividendFeeInput');
@@ -18283,9 +18306,14 @@ function checkAndExecuteDCAPlans() {
     const currentDay = today.getDate();
     const currentMonth = today.getMonth() + 1;
     const currentYear = today.getFullYear();
+    const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
     
     const plans = JSON.parse(localStorage.getItem('dcaPlans') || '[]');
     const enabledPlans = plans.filter(p => p.enabled);
+
+    const promptedKey = 'dcaMonthlyPrompted';
+    const promptedMap = JSON.parse(localStorage.getItem(promptedKey) || '{}');
+    if (!promptedMap[currentMonthKey]) promptedMap[currentMonthKey] = {};
     
     enabledPlans.forEach(plan => {
         // 檢查是否應該執行（扣款日期已到）
@@ -18297,6 +18325,16 @@ function checkAndExecuteDCAPlans() {
                 lastExecuted.getMonth() + 1 !== currentMonth;
             
             if (shouldExecute) {
+                // 避免同一方案同月反覆跳提醒（例如使用者重整頁面）
+                const planId = String(plan.id || '');
+                if (planId && promptedMap[currentMonthKey] && promptedMap[currentMonthKey][planId]) {
+                    return;
+                }
+                if (planId) {
+                    promptedMap[currentMonthKey][planId] = true;
+                    localStorage.setItem(promptedKey, JSON.stringify(promptedMap));
+                }
+
                 // 提示用戶執行定期定額
                 if (confirm(`定期定額計劃提醒：\n${plan.stockName || plan.stockCode} (${plan.stockCode})\n每月 ${plan.day} 號扣款 NT$${plan.amount.toLocaleString('zh-TW')}\n\n是否現在執行？`)) {
                     executeDCATransaction(plan);
