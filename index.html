@@ -622,8 +622,6 @@
                     <div class="action-buttons">
                         <button class="buy-action-btn-large" id="investmentBuyBtn" title="買入">➕ 買入</button>
                         <button class="dca-action-btn-large" id="investmentDCABtn" title="定期定額">📅 定期定額</button>
-                        <button class="investment-icon-btn investment-icon-btn--refresh" id="forceRefreshBtn" title="強制重新抓價（清除手動標記）">🔄</button>
-                        <button class="investment-icon-btn investment-icon-btn--auto" id="autoRefreshToggleBtn" title="啟動定時更新（每5分鐘）">⏰</button>
                     </div>
                     <span class="stock-count" id="stockCount">0 檔</span>
                 </div>
@@ -712,7 +710,12 @@
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">現價</div>
-                    <input type="number" class="metric-input-large" id="metricCurrentPrice" placeholder="輸入現價" step="0.01">
+                    <div class="metric-price-wrapper metric-price-wrapper--simple">
+                        <input type="number" class="metric-input-large" id="metricCurrentPrice" placeholder="輸入現價" step="0.01">
+                        <a href="#" class="metric-quote-btn" id="metricQuoteLink" data-site="cnyes" target="_blank" rel="noopener noreferrer">
+                            鉅亨網查價
+                        </a>
+                    </div>
                 </div>
                 <div class="metric-card highlight">
                     <div class="metric-label">未實現損益</div>
