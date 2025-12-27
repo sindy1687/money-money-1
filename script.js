@@ -552,12 +552,7 @@ function initCategoryGrid(tabType = 'recommended', recordType = null) {
                             </div>
                         `;
                     } else {
-                        const defaultImg = getDefaultCategoryImage(category.name);
-                        if (defaultImg) {
-                            iconHtml = `<img src="${defaultImg}" alt="${category.name}" class="category-icon-image" onerror="this.outerHTML='<span class=&quot;category-icon&quot;>' + (this.getAttribute(&quot;data-fallback&quot;) || '📦') + '</span>'" data-fallback="${category.icon || '📦'}">`;
-                        } else {
-                            iconHtml = `<span class="category-icon">${category.icon || '📦'}</span>`;
-                        }
+                        iconHtml = `<span class="category-icon">${category.icon || '📦'}</span>`;
                     }
                     
                     categoryItem.innerHTML = `
@@ -666,16 +661,7 @@ function initCategoryGrid(tabType = 'recommended', recordType = null) {
                     
                     // 建立圖標 HTML
                     let iconHtml;
-                    if (hasCustomIcon) {
-                        iconHtml = `
-                            <div class="category-icon-wrapper custom-icon-wrapper">
-                                <img src="${customIcons[category.name].value}" alt="${category.name}" class="category-icon-image">
-                                <span class="custom-icon-badge">✨</span>
-                            </div>
-                        `;
-                    } else {
-                        iconHtml = `<span class="category-icon">${category.icon}</span>`;
-                    }
+                    iconHtml = `<span class="category-icon">${category.icon || '📦'}</span>`;
                     
                     categoryItem.innerHTML = `
                         ${iconHtml}
@@ -801,16 +787,7 @@ function initCategoryGrid(tabType = 'recommended', recordType = null) {
                     
                     // 建立圖標 HTML
                     let iconHtml;
-                    if (hasCustomIcon) {
-                        iconHtml = `
-                            <div class="category-icon-wrapper custom-icon-wrapper">
-                                <img src="${customIcons[category.name].value}" alt="${category.name}" class="category-icon-image">
-                                <span class="custom-icon-badge">✨</span>
-                            </div>
-                        `;
-                    } else {
-                        iconHtml = `<span class="category-icon">${category.icon}</span>`;
-                    }
+                    iconHtml = `<span class="category-icon">${category.icon || '📦'}</span>`;
                     
                     categoryItem.innerHTML = `
                         ${iconHtml}
@@ -885,7 +862,7 @@ function initCategoryGrid(tabType = 'recommended', recordType = null) {
         const hasCustomIcon = customIcons[category.name] && customIcons[category.name].type === 'image';
         
         if (hasCustomIcon) {
-            console.log('✓ 分類「' + category.name + '」使用自定義圖片，圖片資料長度:', customIcons[category.name].value.length);
+            console.log('✓ 分類「' + category.name + '」有自定義圖片圖示，但輸入頁已統一使用 Emoji 顯示');
         } else {
             console.log('  分類「' + category.name + '」使用 Emoji:', category.icon);
         }
@@ -901,14 +878,14 @@ function initCategoryGrid(tabType = 'recommended', recordType = null) {
         // 建立圖標 HTML
         let iconHtml;
         if (hasCustomIcon) {
-                        iconHtml = `
-                            <div class="category-icon-wrapper custom-icon-wrapper">
-                                <img src="${customIcons[category.name].value}" alt="${category.name}" class="category-icon-image">
-                                <span class="custom-icon-badge">✨</span>
-                            </div>
-                        `;
+            iconHtml = `
+                <div class="category-icon-wrapper custom-icon-wrapper">
+                    <img src="${customIcons[category.name].value}" alt="${category.name}" class="category-icon-image" onerror="this.outerHTML='<span class=&quot;category-icon&quot;>' + (this.getAttribute(&quot;data-fallback&quot;) || '📦') + '</span>'" data-fallback="${category.icon || '📦'}">
+                    <span class="custom-icon-badge">✨</span>
+                </div>
+            `;
         } else {
-            iconHtml = `<span class="category-icon">${category.icon}</span>`;
+            iconHtml = `<span class="category-icon">${category.icon || '📦'}</span>`;
         }
         
         categoryItem.innerHTML = `
@@ -8011,7 +7988,7 @@ function initDailyBudgetPage(categoryName = '生活費') {
         summaryCard.querySelectorAll('.summary-item--cta').forEach(btn => {
             btn.addEventListener('click', () => {
                 const cat = btn.dataset.category || '卡費';
-                showNextMonthBillsPage(cat, 'pageDailyBudget');
+                showNextMonthBills(cat);
             });
         });
     }
@@ -8197,7 +8174,7 @@ function showDailyDetail(categoryName, day, year, month) {
                 if (document.body.contains(detailModal)) {
                     document.body.removeChild(detailModal);
                 }
-                showNextMonthBillsPage('卡費', 'pageDailyBudget');
+                showNextMonthBills('卡費');
             });
         }
     }
@@ -13286,6 +13263,74 @@ function applyCustomTheme() {
     // 應用按鈕顏色（與主色調相同）
     if (customTheme.buttonColor) {
         root.style.setProperty('--color-primary', customTheme.buttonColor);
+    }
+
+    const effectivePrimaryColor = customTheme.buttonColor || customTheme.primaryColor;
+    if (effectivePrimaryColor) {
+        const parseRgb = (color) => {
+            const c = String(color || '').trim();
+            if (/^#?[0-9a-fA-F]{6}$/.test(c)) {
+                const hex = c.replace('#', '');
+                return {
+                    r: parseInt(hex.slice(0, 2), 16),
+                    g: parseInt(hex.slice(2, 4), 16),
+                    b: parseInt(hex.slice(4, 6), 16)
+                };
+            }
+            const m = c.match(/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i);
+            if (m) {
+                return {
+                    r: Math.min(255, Math.max(0, parseInt(m[1], 10))),
+                    g: Math.min(255, Math.max(0, parseInt(m[2], 10))),
+                    b: Math.min(255, Math.max(0, parseInt(m[3], 10)))
+                };
+            }
+            return null;
+        };
+
+        const base = parseRgb(effectivePrimaryColor);
+        if (base) {
+            const { r, g, b } = base;
+
+            root.style.setProperty('--color-primary', effectivePrimaryColor);
+            root.style.setProperty('--border-primary', effectivePrimaryColor);
+
+            const lightR = Math.min(255, Math.floor(r + (255 - r) * 0.3));
+            const lightG = Math.min(255, Math.floor(g + (255 - g) * 0.3));
+            const lightB = Math.min(255, Math.floor(b + (255 - b) * 0.3));
+            root.style.setProperty('--color-primary-light', `rgb(${lightR}, ${lightG}, ${lightB})`);
+
+            const lighterR = Math.min(255, Math.floor(r + (255 - r) * 0.5));
+            const lighterG = Math.min(255, Math.floor(g + (255 - g) * 0.5));
+            const lighterB = Math.min(255, Math.floor(b + (255 - b) * 0.5));
+            root.style.setProperty('--color-primary-lighter', `rgb(${lighterR}, ${lighterG}, ${lighterB})`);
+
+            const darkR = Math.max(0, Math.floor(r * 0.8));
+            const darkG = Math.max(0, Math.floor(g * 0.8));
+            const darkB = Math.max(0, Math.floor(b * 0.8));
+            root.style.setProperty('--color-primary-dark', `rgb(${darkR}, ${darkG}, ${darkB})`);
+
+            const setAlpha = (suffix, alpha) => {
+                root.style.setProperty(`--color-primary-rgba-${suffix}`, `rgba(${r}, ${g}, ${b}, ${alpha})`);
+            };
+            setAlpha('08', '0.08');
+            setAlpha('10', '0.1');
+            setAlpha('12', '0.12');
+            setAlpha('15', '0.15');
+            setAlpha('18', '0.18');
+            setAlpha('20', '0.2');
+            setAlpha('25', '0.25');
+            setAlpha('30', '0.3');
+
+            const setLightAlpha = (suffix, alpha) => {
+                root.style.setProperty(`--color-primary-light-rgba-${suffix}`, `rgba(${lightR}, ${lightG}, ${lightB}, ${alpha})`);
+            };
+            setLightAlpha('08', '0.08');
+            setLightAlpha('10', '0.1');
+            setLightAlpha('15', '0.15');
+            setLightAlpha('20', '0.2');
+            setLightAlpha('25', '0.25');
+        }
     }
     
     // 應用框的背景顏色
@@ -19279,7 +19324,7 @@ function showMemberSelectModal() {
                 <button id="addMemberBtn" style="flex: 1; padding: 12px; border: 2px dashed #ffb6d9; border-radius: 12px; background: #fff5f9; color: #ff69b4; font-size: 14px; font-weight: 500; cursor: pointer;">
                     ➕ 新增成員
                 </button>
-                ${selectedMember ? `<button id="removeMemberBtn" style="padding: 12px 20px; border: 2px solid #f0f0f0; border-radius: 12px; background: #ffffff; color: #666; font-size: 14px; font-weight: 500; cursor: pointer;">清除</button>` : ''}
+                ${selectedMember ? '<button id="removeMemberBtn" style="padding: 12px 20px; border: 2px solid #f0f0f0; border-radius: 12px; background: #ffffff; color: #666; font-size: 14px; font-weight: 500; cursor: pointer;">清除</button>' : ''}
             </div>
         </div>
     `;
