@@ -9,6 +9,74 @@ if (typeof window !== 'undefined' && typeof window.applyAutoWidth !== 'function'
     window.applyAutoWidth = function () {};
 }
 
+async function applyBackupDataPayload(data) {
+    // 還原資料（包含所有資料）
+    if (data.accountingRecords) {
+        localStorage.setItem('accountingRecords', JSON.stringify(data.accountingRecords));
+    }
+    if (data.categoryBudgets) {
+        localStorage.setItem('categoryBudgets', JSON.stringify(data.categoryBudgets));
+    }
+    if (data.categoryEnabledState) {
+        localStorage.setItem('categoryEnabledState', JSON.stringify(data.categoryEnabledState));
+    }
+    if (data.dailyBudgetTracking) {
+        localStorage.setItem('dailyBudgetTracking', JSON.stringify(data.dailyBudgetTracking));
+    }
+    if (data.customCategories) {
+        localStorage.setItem('customCategories', JSON.stringify(data.customCategories));
+    }
+    if (data.categoryCustomIcons) {
+        // 壓縮所有導入的圖標
+        console.log('開始壓縮導入的圖標...');
+        const compressedIcons = await compressAllIcons(data.categoryCustomIcons);
+        const saved = safeSetItem('categoryCustomIcons', compressedIcons);
+        if (!saved) {
+            alert('還原失敗：圖標數據太大，無法保存。');
+            return;
+        }
+        console.log('✓ 圖標已壓縮並保存');
+    }
+    if (data.investmentRecords) {
+        localStorage.setItem('investmentRecords', JSON.stringify(data.investmentRecords));
+    }
+    if (data.dcaPlans) {
+        localStorage.setItem('dcaPlans', JSON.stringify(data.dcaPlans));
+    }
+    if (data.installmentRules) {
+        localStorage.setItem('installmentRules', JSON.stringify(data.installmentRules));
+    }
+    if (data.stockCurrentPrices) {
+        localStorage.setItem('stockCurrentPrices', JSON.stringify(data.stockCurrentPrices));
+    }
+    if (data.accounts) {
+        localStorage.setItem('accounts', JSON.stringify(data.accounts));
+    }
+    if (data.imageEmojis) {
+        localStorage.setItem('imageEmojis', JSON.stringify(data.imageEmojis));
+    }
+    if (data.members) {
+        localStorage.setItem('members', JSON.stringify(data.members));
+    }
+    if (data.theme) {
+        localStorage.setItem('theme', data.theme);
+    }
+    if (data.fontSize) {
+        localStorage.setItem('fontSize', data.fontSize);
+    }
+    if (data.customTheme) {
+        localStorage.setItem('customTheme', JSON.stringify(data.customTheme));
+    }
+
+    alert('資料還原成功！\n頁面將重新載入以顯示最新資料。');
+    location.reload();
+}
+
+// 預設雲端備份服務（若使用者尚未設定 Sheet 網址）
+if (!localStorage.getItem('googleSheetUploadUrl')) {
+    localStorage.setItem('googleSheetUploadUrl', 'https://script.google.com/macros/s/AKfycbw_0TfMTZvO3_qxXTFS5LxqiNEB6k5R3lZhlr9L6fZaiVl3KN2VDD4aX7m-QiMMhBm1/exec');
+}
+
 const DEFAULT_CATEGORY_IMAGES = {
     '飲食': './image/13.png',
     '外食 / 飲料': './image/14.png',
@@ -2889,6 +2957,165 @@ function getGoogleSheetUploadUrl() {
     return (localStorage.getItem('googleSheetUploadUrl') || '').trim();
 }
 
+function getGoogleCloudBackupKey() {
+    return (localStorage.getItem('googleCloudBackupKey') || '').trim();
+}
+
+function setGoogleCloudBackupKey() {
+    const current = getGoogleCloudBackupKey();
+    const next = prompt('請輸入雲端備份碼（換裝置時用同一組即可還原）\n\n建議：使用長一點、難猜的字串', current);
+    if (next == null) return;
+    const v = String(next).trim();
+    if (!v) {
+        localStorage.removeItem('googleCloudBackupKey');
+        alert('已清除雲端備份碼');
+        return;
+    }
+    localStorage.setItem('googleCloudBackupKey', v);
+    alert('已儲存雲端備份碼');
+}
+
+function collectFullBackupPayload() {
+    return {
+        // 記帳相關
+        accountingRecords: JSON.parse(localStorage.getItem('accountingRecords') || '[]'),
+        categoryBudgets: JSON.parse(localStorage.getItem('categoryBudgets') || '{}'),
+        categoryEnabledState: JSON.parse(localStorage.getItem('categoryEnabledState') || '{}'),
+        dailyBudgetTracking: JSON.parse(localStorage.getItem('dailyBudgetTracking') || '{}'),
+        customCategories: JSON.parse(localStorage.getItem('customCategories') || '[]'),
+        categoryCustomIcons: JSON.parse(localStorage.getItem('categoryCustomIcons') || '{}'),
+
+        // 投資相關
+        investmentRecords: JSON.parse(localStorage.getItem('investmentRecords') || '[]'),
+        dcaPlans: JSON.parse(localStorage.getItem('dcaPlans') || '[]'),
+        stockCurrentPrices: JSON.parse(localStorage.getItem('stockCurrentPrices') || '{}'),
+
+        // 分期
+        installmentRules: JSON.parse(localStorage.getItem('installmentRules') || '[]'),
+
+        // 帳戶相關
+        accounts: JSON.parse(localStorage.getItem('accounts') || '[]'),
+
+        // 表情和圖標
+        imageEmojis: JSON.parse(localStorage.getItem('imageEmojis') || '[]'),
+
+        // 成員
+        members: JSON.parse(localStorage.getItem('members') || '[]'),
+
+        // 設定
+        theme: localStorage.getItem('theme') || 'default',
+        fontSize: localStorage.getItem('fontSize') || 'medium',
+        customTheme: JSON.parse(localStorage.getItem('customTheme') || '{}'),
+
+        // 備份資訊
+        backupDate: new Date().toISOString(),
+        backupVersion: 'cloud-1.0',
+        appName: '記帳本'
+    };
+}
+
+function cloudBackupToGoogleSheet() {
+    const url = getGoogleSheetUploadUrl();
+    if (!url) {
+        alert('尚未設定 Web App URL');
+        setGoogleSheetUploadUrl();
+        return;
+    }
+
+    const backupKey = getGoogleCloudBackupKey();
+    if (!backupKey) {
+        alert('尚未設定雲端備份碼');
+        setGoogleCloudBackupKey();
+        return;
+    }
+
+    const payloadData = collectFullBackupPayload();
+    const snapshot = JSON.stringify(payloadData);
+
+    const payload = {
+        action: 'save_snapshot',
+        backupKey,
+        snapshot
+    };
+
+    fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        alert('已送出雲端備份（同一份 Google Sheet）\n\n請到 Google Sheet 確認是否有成功寫入。\n\n換裝置時，設定相同 Web App URL + 雲端備份碼，即可雲端還原。');
+    }).catch((e) => {
+        alert('雲端備份失敗：' + (e && e.message ? e.message : e));
+    });
+}
+
+function cloudRestoreFromGoogleSheet() {
+    const url = getGoogleSheetUploadUrl();
+    if (!url) {
+        alert('尚未設定 Web App URL');
+        setGoogleSheetUploadUrl();
+        return;
+    }
+
+    const backupKey = getGoogleCloudBackupKey();
+    if (!backupKey) {
+        alert('尚未設定雲端備份碼');
+        setGoogleCloudBackupKey();
+        return;
+    }
+
+    if (!confirm('確定要從雲端還原資料嗎？\n\n這將覆蓋現有的所有資料！')) {
+        return;
+    }
+
+    // JSONP：用 script tag 取得資料（避免瀏覽器 CORS 限制）
+    const cbName = `__cloudRestoreCb_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    const script = document.createElement('script');
+    const cleanup = () => {
+        try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
+        if (script && script.parentNode) script.parentNode.removeChild(script);
+    };
+
+    window[cbName] = async (res) => {
+        try {
+            if (!res || !res.ok) {
+                alert('雲端還原失敗：' + ((res && res.error) ? res.error : '未知錯誤'));
+                cleanup();
+                return;
+            }
+
+            const snapshotStr = res.snapshot;
+            if (!snapshotStr) {
+                alert('雲端還原失敗：找不到備份內容');
+                cleanup();
+                return;
+            }
+
+            const data = JSON.parse(snapshotStr);
+            await applyBackupDataPayload(data);
+        } catch (e) {
+            alert('雲端還原失敗：' + (e && e.message ? e.message : e));
+        } finally {
+            cleanup();
+        }
+    };
+
+    const qs = new URLSearchParams({
+        action: 'load_snapshot',
+        backupKey,
+        callback: cbName
+    });
+    script.src = url + (url.includes('?') ? '&' : '?') + qs.toString();
+    script.onerror = () => {
+        alert('雲端還原失敗：無法連線到雲端備份服務（請確認 Web App 部署權限/網址）');
+        cleanup();
+    };
+    document.body.appendChild(script);
+}
+
 function setGoogleSheetUploadUrl() {
     const current = getGoogleSheetUploadUrl();
     const url = prompt('請輸入 Google Apps Script Web App URL（/exec）', current);
@@ -2979,6 +3206,134 @@ function uploadAllRecordsDetailsToGoogleSheet() {
     }).catch((e) => {
         alert('上傳失敗：' + (e && e.message ? e.message : e));
     });
+}
+
+function sanitizeGoogleSheetTabName(name) {
+    const raw = String(name ?? '').trim() || '未命名';
+    // Google Sheet tab name cannot contain: : \ / ? * [ ]
+    const cleaned = raw.replace(/[:\\/\?\*\[\]]/g, '_').slice(0, 100);
+    return cleaned || '未命名';
+}
+
+function buildAccountingRecordsTableForAccount(records, accountId, accountsById) {
+    const header = [
+        'date',
+        'type',
+        'category',
+        'amount',
+        'note',
+        'account',
+        'direction',
+        'counterpartyAccount',
+        'member',
+        'emoji',
+        'isNextMonthBill',
+        'timestamp'
+    ];
+
+    const accountName = accountsById[accountId]?.name || accountId || '未分類帳戶';
+
+    const rows = records.map(r => {
+        const date = r?.date ?? '';
+        const type = r?.type ?? '';
+        const category = r?.category ?? '';
+        const amount = Number(String(r?.amount ?? 0).replace(/,/g, '')) || 0;
+        const note = r?.note ?? '';
+        const member = r?.member ?? '';
+        const emoji = r?.emoji ?? '';
+        const isNextMonthBill = r?.isNextMonthBill ? 'true' : 'false';
+        const timestamp = r?.timestamp ?? '';
+
+        if (type === 'transfer') {
+            const fromId = r?.fromAccount ?? '';
+            const toId = r?.toAccount ?? '';
+            const direction = fromId === accountId ? 'out' : (toId === accountId ? 'in' : '');
+            const counterpartyId = direction === 'out' ? toId : (direction === 'in' ? fromId : '');
+            const counterpartyAccount = accountsById[counterpartyId]?.name || counterpartyId;
+            return [date, type, category, amount, note, accountName, direction, counterpartyAccount, member, emoji, isNextMonthBill, timestamp];
+        }
+
+        return [date, type, category, amount, note, accountName, '', '', member, emoji, isNextMonthBill, timestamp];
+    });
+
+    return [header, ...rows];
+}
+
+async function uploadRecordsByAccountToGoogleSheet() {
+    const url = getGoogleSheetUploadUrl();
+    if (!url) {
+        alert('尚未設定 Web App URL');
+        setGoogleSheetUploadUrl();
+        return;
+    }
+
+    const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+    if (!records.length) {
+        alert('沒有找到任何記錄');
+        return;
+    }
+
+    const accounts = getAccounts();
+    const accountsById = {};
+    accounts.forEach(a => {
+        if (a && a.id) accountsById[a.id] = a;
+    });
+
+    const uniqueTabNames = new Map();
+    const ensureUniqueTabName = (base) => {
+        const safe = sanitizeGoogleSheetTabName(base);
+        const count = uniqueTabNames.get(safe) || 0;
+        uniqueTabNames.set(safe, count + 1);
+        return count === 0 ? safe : `${safe} (${count + 1})`;
+    };
+
+    const recordsByAccount = new Map();
+    const ensureBucket = (id) => {
+        const key = id || 'UNASSIGNED';
+        if (!recordsByAccount.has(key)) recordsByAccount.set(key, []);
+        return recordsByAccount.get(key);
+    };
+
+    records.forEach(r => {
+        if (!r) return;
+        const type = r.type || (r.fromAccount || r.toAccount ? 'transfer' : 'expense');
+        if (type === 'transfer') {
+            const fromId = r.fromAccount;
+            const toId = r.toAccount;
+            if (fromId) ensureBucket(fromId).push(r);
+            if (toId && toId !== fromId) ensureBucket(toId).push(r);
+            return;
+        }
+        ensureBucket(r.account).push(r);
+    });
+
+    const createdTabs = [];
+    for (const [accountId, groupRecords] of recordsByAccount.entries()) {
+        const accountName = accountId === 'UNASSIGNED'
+            ? '未分類帳戶'
+            : (accountsById[accountId]?.name || accountId);
+
+        const sheetName = ensureUniqueTabName(accountName);
+        const table = buildAccountingRecordsTableForAccount(groupRecords, accountId === 'UNASSIGNED' ? '' : accountId, accountsById);
+        const payload = {
+            action: 'upload_table',
+            sheetName,
+            table
+        };
+
+        await fetch(url, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        createdTabs.push(sheetName);
+    }
+
+    alert(`已送出按帳戶備份（${createdTabs.length} 個分頁）\n\n請到 Google Sheet 查看分頁：\n${createdTabs.join('\n')}`);
 }
 
 function maybeRemindMonthlyUpload() {
@@ -9909,14 +10264,18 @@ function initSettingsPage() {
         { icon: '📚', title: '教學', action: 'tutorial' },
         { icon: '🖼️', title: '圖示', action: 'iconManage' },
         { icon: '🔗', title: 'Sheet 網址', action: 'setGoogleSheetUploadUrl' },
+        { icon: '🔑', title: '雲端備份碼', action: 'setGoogleCloudBackupKey' },
+        { icon: '☁️', title: '雲端備份（完整）', action: 'cloudBackupFull' },
+        { icon: '☁️', title: '雲端還原（完整）', action: 'cloudRestoreFull' },
         { icon: '☁️', title: '上傳明細', action: 'uploadAllRecordsDetailsToGoogleSheet' },
+        { icon: '☁️', title: '按帳戶備份', action: 'uploadRecordsByAccountToGoogleSheet' },
         { icon: '🧮', title: '上傳加總', action: 'uploadIncomeExpenseCategorySummaryToGoogleSheet' },
-        { icon: '🧾', title: '分類加總 CSV', action: 'exportExpenseCategorySummary' },
-        { icon: '🧾', title: '分期', action: 'installmentRules' },
         { icon: '💾', title: '備份', action: 'backup' },
         { icon: '📥', title: '還原', action: 'restore' },
         { icon: '📊', title: '匯出', action: 'export' },
         { icon: '📂', title: '匯入', action: 'import' },
+        { icon: '🧾', title: '分類加總 CSV', action: 'exportExpenseCategorySummary' },
+        { icon: '🧾', title: '分期', action: 'installmentRules' },
         { icon: '👨‍💻', title: '關於', action: 'creator' }
     ];
     
@@ -9945,8 +10304,16 @@ function initSettingsPage() {
                 restoreData();
             } else if (action === 'setGoogleSheetUploadUrl') {
                 setGoogleSheetUploadUrl();
+            } else if (action === 'setGoogleCloudBackupKey') {
+                setGoogleCloudBackupKey();
+            } else if (action === 'cloudBackupFull') {
+                cloudBackupToGoogleSheet();
+            } else if (action === 'cloudRestoreFull') {
+                cloudRestoreFromGoogleSheet();
             } else if (action === 'uploadAllRecordsDetailsToGoogleSheet') {
                 uploadAllRecordsDetailsToGoogleSheet();
+            } else if (action === 'uploadRecordsByAccountToGoogleSheet') {
+                uploadRecordsByAccountToGoogleSheet();
             } else if (action === 'uploadIncomeExpenseCategorySummaryToGoogleSheet') {
                 uploadIncomeExpenseCategorySummaryToGoogleSheet();
             } else if (action === 'exportExpenseCategorySummary') {
@@ -11206,69 +11573,8 @@ function restoreData() {
                 if (!confirm('確定要還原資料嗎？\n這將覆蓋現有的所有資料！')) {
                     return;
                 }
-                
-                // 還原資料（包含所有資料）
-                if (data.accountingRecords) {
-                    localStorage.setItem('accountingRecords', JSON.stringify(data.accountingRecords));
-                }
-                if (data.categoryBudgets) {
-                    localStorage.setItem('categoryBudgets', JSON.stringify(data.categoryBudgets));
-                }
-                if (data.categoryEnabledState) {
-                    localStorage.setItem('categoryEnabledState', JSON.stringify(data.categoryEnabledState));
-                }
-                if (data.dailyBudgetTracking) {
-                    localStorage.setItem('dailyBudgetTracking', JSON.stringify(data.dailyBudgetTracking));
-                }
-                if (data.customCategories) {
-                    localStorage.setItem('customCategories', JSON.stringify(data.customCategories));
-                }
-                if (data.categoryCustomIcons) {
-                    // 壓縮所有導入的圖標
-                    console.log('開始壓縮導入的圖標...');
-                    const compressedIcons = await compressAllIcons(data.categoryCustomIcons);
-                    const saved = safeSetItem('categoryCustomIcons', compressedIcons);
-                    if (!saved) {
-                        alert('還原失敗：圖標數據太大，無法保存。');
-                        return;
-                    }
-                    console.log('✓ 圖標已壓縮並保存');
-                }
-                if (data.investmentRecords) {
-                    localStorage.setItem('investmentRecords', JSON.stringify(data.investmentRecords));
-                }
-                if (data.dcaPlans) {
-                    localStorage.setItem('dcaPlans', JSON.stringify(data.dcaPlans));
-                }
-                if (data.installmentRules) {
-                    localStorage.setItem('installmentRules', JSON.stringify(data.installmentRules));
-                }
-                if (data.stockCurrentPrices) {
-                    localStorage.setItem('stockCurrentPrices', JSON.stringify(data.stockCurrentPrices));
-                }
-                if (data.accounts) {
-                    localStorage.setItem('accounts', JSON.stringify(data.accounts));
-                }
-                if (data.imageEmojis) {
-                    localStorage.setItem('imageEmojis', JSON.stringify(data.imageEmojis));
-                }
-                if (data.members) {
-                    localStorage.setItem('members', JSON.stringify(data.members));
-                }
-                if (data.theme) {
-                    localStorage.setItem('theme', data.theme);
-                }
-                if (data.fontSize) {
-                    localStorage.setItem('fontSize', data.fontSize);
-                }
-                if (data.customTheme) {
-                    localStorage.setItem('customTheme', JSON.stringify(data.customTheme));
-                }
-                
-                alert('資料還原成功！\n頁面將重新載入以顯示最新資料。');
-                
-                // 重新載入頁面
-                location.reload();
+
+                await applyBackupDataPayload(data);
             } catch (error) {
                 console.error('還原失敗:', error);
                 alert('還原失敗，請確認檔案格式正確。');
@@ -11862,10 +12168,10 @@ const tutorialData = {
                     <h3 style="font-size: 20px; font-weight: 600; color: #333; margin: 0;">資料管理</h3>
                 </div>
                 <div style="font-size: 15px; color: #666; line-height: 1.8;">
-                    <p style="margin: 0 0 12px 0;"><strong>1. 備份資料</strong><br>定期備份資料，避免資料遺失</p>
-                    <p style="margin: 0 0 12px 0;"><strong>2. 還原資料</strong><br>選擇備份文件還原資料（會覆蓋現有資料）</p>
-                    <p style="margin: 0 0 12px 0;"><strong>3. 匯出資料</strong><br>匯出 CSV 格式，可在 Excel 中查看</p>
-                    <p style="margin: 0;"><strong>4. 匯入資料</strong><br>從 CSV 文件匯入記帳記錄</p>
+                    <p style="margin: 0 0 12px 0;"><strong>1. 雲端備份（完整）</strong><br>先設定「Sheet 網址」與「雲端備份碼」，再點「雲端備份（完整）」把整份資料快照上傳到同一份 Google Sheet</p>
+                    <p style="margin: 0 0 12px 0;"><strong>2. 換裝置雲端還原（完整）</strong><br>新裝置設定相同「Sheet 網址」+「雲端備份碼」，點「雲端還原（完整）」即可把資料下載回來（會覆蓋現有資料）</p>
+                    <p style="margin: 0 0 12px 0;"><strong>3. 本機備份/還原</strong><br>「備份」會下載 JSON 檔；「還原」選擇 JSON 檔覆蓋資料（適合離線保存）</p>
+                    <p style="margin: 0;"><strong>4. 匯入/匯出</strong><br>可匯出 CSV 供 Excel 使用，也可從 CSV 匯入記帳記錄（適合資料交換）</p>
                 </div>
             `
         },
@@ -12137,10 +12443,11 @@ function showTutorial() {
                         <span>💾</span> 資料備份與還原
                     </h3>
                     <div style="font-size: 14px; color: #666; line-height: 1.8;">
-                        <p style="margin: 0 0 8px 0;"><strong>備份資料：</strong>設置 → 備份資料，系統會下載 JSON 備份文件</p>
-                        <p style="margin: 0 0 8px 0;"><strong>還原資料：</strong>設置 → 還原資料，選擇之前備份的文件</p>
-                        <p style="margin: 0 0 8px 0;"><strong>匯出資料：</strong>設置 → 匯出資料，可匯出 CSV 格式供 Excel 使用</p>
-                        <p style="margin: 0;"><strong>注意：</strong>還原資料會覆蓋現有資料，請謹慎操作</p>
+                        <p style="margin: 0 0 8px 0;"><strong>雲端備份（完整）：</strong>設置 → Sheet 網址（貼上 /exec）→ 雲端備份碼 → 雲端備份（完整）</p>
+                        <p style="margin: 0 0 8px 0;"><strong>換裝置雲端還原（完整）：</strong>新裝置同樣設定 Sheet 網址 + 雲端備份碼 → 雲端還原（完整）</p>
+                        <p style="margin: 0 0 8px 0;"><strong>本機備份/還原：</strong>設置 → 備份（下載 JSON）/ 還原（選擇 JSON 覆蓋）</p>
+                        <p style="margin: 0 0 8px 0;"><strong>匯入/匯出：</strong>設置 → 匯出（CSV）/ 匯入（CSV）</p>
+                        <p style="margin: 0;"><strong>注意：</strong>任何「還原」都會覆蓋現有資料，建議先做一次備份再操作</p>
                     </div>
                 </div>
                 
