@@ -4825,10 +4825,9 @@ function updateInvestmentRecords() {
                 }
                 html += `
                     <div class="investment-record-item amount-glow ${amountClass}" data-record-id="${recordId}">
-                        <button class="record-quick-buy-fab" data-stock-code="${record.stockCode || ''}" data-stock-name="${record.stockName || ''}" title="快捷買入">買入</button>
                         <div class="record-header">
                             <div class="record-header-info">
-                                <span class="record-type buy">買入</span>
+                                <span class="record-type buy" data-stock-code="${record.stockCode || ''}" data-stock-name="${record.stockName || ''}" data-price="${price}" data-shares="${shares}" data-fee="${record.fee || 0}" data-isdca="${record.isDCA ? '1' : '0'}" title="再買一次">買入</span>
                                 <span class="record-date">${record.date}</span>
                             </div>
                             ${renderRecordActionButtons(recordId)}
@@ -4926,20 +4925,30 @@ function updateInvestmentRecords() {
 
     bindRecordOverflowMenu(recordsList);
 
-    // 綁定買入快捷按鈕事件（只在買入卡片上）
-    recordsList.querySelectorAll('.record-quick-buy-fab').forEach(btn => {
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        newBtn.addEventListener('click', (e) => {
+    // 綁定買入標籤點擊事件：點「買入」直接帶上一筆資料到買入頁
+    recordsList.querySelectorAll('.record-type.buy').forEach(badge => {
+        const newBadge = badge.cloneNode(true);
+        badge.parentNode.replaceChild(newBadge, badge);
+        newBadge.style.cursor = 'pointer';
+        newBadge.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();
             playClickSound();
-            const stockCode = newBtn.dataset.stockCode || '';
-            const stockName = newBtn.dataset.stockName || '';
+            const stockCode = newBadge.dataset.stockCode || '';
+            const stockName = newBadge.dataset.stockName || '';
+            const price = parseFloat(newBadge.dataset.price || '0') || 0;
+            const shares = parseInt(newBadge.dataset.shares || '0', 10) || 0;
+            const fee = parseFloat(newBadge.dataset.fee || '0') || 0;
+            const isDCA = (newBadge.dataset.isdca || '') === '1';
             showInvestmentInputPage('buy');
             setTimeout(() => {
                 const codeInput = document.getElementById('calcStockCodeInput');
                 const nameInput = document.getElementById('calcStockNameInput');
+                const priceInput = document.getElementById('calcPriceInput');
+                const sharesInput = document.getElementById('calcSharesInput');
+                const feeInput = document.getElementById('calcFeeInput');
+                const autoFeeCheckbox = document.getElementById('calcAutoFeeCheckbox');
+                const isDCAInput = document.getElementById('calcIsDCAInput');
                 if (codeInput) {
                     codeInput.value = stockCode;
                     codeInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -4949,6 +4958,31 @@ function updateInvestmentRecords() {
                     nameInput.value = stockName;
                     nameInput.dispatchEvent(new Event('input', { bubbles: true }));
                     nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (priceInput) {
+                    priceInput.value = price > 0 ? String(price) : '';
+                    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                if (sharesInput) {
+                    sharesInput.value = shares > 0 ? String(shares) : '0';
+                    sharesInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                if (autoFeeCheckbox) {
+                    autoFeeCheckbox.checked = false;
+                    autoFeeCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (feeInput) {
+                    feeInput.disabled = false;
+                    feeInput.style.opacity = '1';
+                    feeInput.value = String(fee || 0);
+                    feeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                if (isDCAInput) {
+                    isDCAInput.checked = isDCA;
+                    isDCAInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (typeof updateInvestmentDisplay === 'function') {
+                    updateInvestmentDisplay();
                 }
             }, 120);
         });
@@ -15291,6 +15325,74 @@ function updateStockRecords(stockCode) {
         }
 
         bindRecordOverflowMenu(buyList);
+
+        // 綁定買入標籤點擊事件：點「買入」直接帶上一筆資料到買入頁
+        buyList.querySelectorAll('.record-card-type.buy').forEach(badge => {
+            const newBadge = badge.cloneNode(true);
+            badge.parentNode.replaceChild(newBadge, badge);
+            newBadge.style.cursor = 'pointer';
+            newBadge.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                playClickSound();
+
+                const stockCode = newBadge.dataset.stockCode || '';
+                const stockName = newBadge.dataset.stockName || '';
+                const price = parseFloat(newBadge.dataset.price || '0') || 0;
+                const shares = parseInt(newBadge.dataset.shares || '0', 10) || 0;
+                const fee = parseFloat(newBadge.dataset.fee || '0') || 0;
+                const isDCA = (newBadge.dataset.isdca || '') === '1';
+
+                showInvestmentInputPage('buy');
+                setTimeout(() => {
+                    const codeInput = document.getElementById('calcStockCodeInput');
+                    const nameInput = document.getElementById('calcStockNameInput');
+                    const priceInput = document.getElementById('calcPriceInput');
+                    const sharesInput = document.getElementById('calcSharesInput');
+                    const feeInput = document.getElementById('calcFeeInput');
+                    const autoFeeCheckbox = document.getElementById('calcAutoFeeCheckbox');
+                    const isDCAInput = document.getElementById('calcIsDCAInput');
+
+                    if (codeInput) {
+                        codeInput.value = stockCode;
+                        codeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        codeInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (nameInput) {
+                        nameInput.value = stockName;
+                        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+
+                    if (priceInput) {
+                        priceInput.value = price > 0 ? String(price) : '';
+                        priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    if (sharesInput) {
+                        sharesInput.value = shares > 0 ? String(shares) : '0';
+                        sharesInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    if (autoFeeCheckbox) {
+                        autoFeeCheckbox.checked = false;
+                        autoFeeCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (feeInput) {
+                        feeInput.disabled = false;
+                        feeInput.style.opacity = '1';
+                        feeInput.value = String(fee || 0);
+                        feeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    if (isDCAInput) {
+                        isDCAInput.checked = isDCA;
+                        isDCAInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+
+                    if (typeof updateInvestmentDisplay === 'function') {
+                        updateInvestmentDisplay();
+                    }
+                }, 120);
+            });
+        });
     }
     
     // 賣出記錄
@@ -15405,7 +15507,7 @@ function createRecordCard(record) {
             <div class="record-card ${isDividendReinvest ? 'dividend-reinvest' : ''} ${isDCA ? 'dca-invest' : ''}" data-record-id="${recordId}">
                 <div class="record-card-header">
                     <div class="record-card-headline">
-                        <span class="record-card-type buy ${isDividendReinvest ? 'dividend-reinvest-badge' : ''} ${isDCA ? 'dca-badge' : ''}">${isDividendReinvest ? '💰 股利購買' : isDCA ? '📅 定期定額' : '買入'}</span>
+                        <span class="record-card-type buy ${isDividendReinvest ? 'dividend-reinvest-badge' : ''} ${isDCA ? 'dca-badge' : ''}" data-stock-code="${record.stockCode || ''}" data-stock-name="${record.stockName || ''}" data-price="${price}" data-shares="${shares}" data-fee="${record.fee || 0}" data-isdca="${isDCA ? '1' : '0'}" title="再買一次">${isDividendReinvest ? '💰 股利購買' : isDCA ? '📅 定期定額' : '買入'}</span>
                         <span class="record-card-date">${record.date}</span>
                     </div>
                     ${renderRecordActionButtons(recordId)}
@@ -16973,28 +17075,44 @@ function saveInvestmentRecord(type) {
     records.push(record);
     localStorage.setItem('investmentRecords', JSON.stringify(records));
     
-    // 如果是定期定額買入，自動在記帳本中記錄存股支出
-    if (type === 'buy' && record.isDCA) {
+    // 買入：自動在記帳本中記錄「轉帳」（顯示於轉帳分頁）
+    if (type === 'buy') {
         // 總投入金額（價格 × 股數 + 手續費），無條件進位為整數
         const totalCost = Math.ceil(totalAmount + fee);
-        
+
+        const selectedAccountId = (typeof getSelectedAccount === 'function' ? getSelectedAccount()?.id : null) || '';
+        const accounts = (typeof getAccounts === 'function' ? getAccounts() : []) || [];
+        const configuredSettlementAccountId = localStorage.getItem('investmentSettlementAccountId') || '';
+        let settlementAccountId = configuredSettlementAccountId;
+        if (!settlementAccountId) {
+            const candidate = accounts.find(a => {
+                const name = String(a?.name || '');
+                return /交割|證券|券商|broker|settle/i.test(name);
+            });
+            if (candidate && candidate.id) settlementAccountId = candidate.id;
+        }
+        if (!settlementAccountId) settlementAccountId = selectedAccountId;
+
         // 創建記帳記錄
         const accountingRecord = {
-            type: 'expense',
-            category: '存股',
+            type: 'transfer',
+            category: finalStockName ? `${stockCode} ${finalStockName}` : stockCode,
             amount: totalCost,
-            note: `定期定額：${finalStockName} (${stockCode}) ${shares}股`,
+            account: selectedAccountId,
+            fromAccount: selectedAccountId,
+            toAccount: settlementAccountId,
+            note: `${record.isDCA ? '定期定額' : '買入'}：${finalStockName} (${stockCode}) ${shares}股 @ NT$${price.toLocaleString('zh-TW')}`,
             date: date,
             timestamp: new Date().toISOString(),
-            linkedInvestment: true, // 標記為與投資記錄關聯
-            investmentRecordId: record.timestamp // 關聯的投資記錄ID
+            linkedInvestment: true,
+            investmentRecordId: record.timestamp
         };
-        
+
         // 保存到記帳記錄
         let accountingRecords = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
         accountingRecords.push(accountingRecord);
         localStorage.setItem('accountingRecords', JSON.stringify(accountingRecords));
-        
+
         // 更新記帳本顯示（如果記帳本頁面已初始化）
         if (typeof updateLedgerSummary === 'function') {
             updateLedgerSummary(accountingRecords);
@@ -17031,9 +17149,9 @@ function saveInvestmentRecord(type) {
         ? `買入記錄已儲存！\n${stockName} (${stockCode})\n${shares}股 @ NT$${price.toLocaleString('zh-TW')}`
         : `賣出記錄已儲存！\n${stockName} (${stockCode})\n${shares}股 @ NT$${price.toLocaleString('zh-TW')}\n實現損益：NT$${record.realizedPnl.toLocaleString('zh-TW')}`;
     
-    // 如果是定期定額，提示已自動記錄到記帳本
-    if (type === 'buy' && record.isDCA) {
-        message += `\n\n✓ 已自動記錄到記帳本「存股」分類`;
+    // 如果是買入，提示已自動記錄到記帳本
+    if (type === 'buy') {
+        message += `\n\n✓ 已自動記錄到記帳本「轉帳」`;
     }
     
     alert(message);
