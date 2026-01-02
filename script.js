@@ -15663,6 +15663,40 @@ function deleteInvestmentRecord(recordId) {
     
     // 保存到 localStorage
     try {
+        // 刪除記帳本中關聯的「轉帳」紀錄（買入才會建立 linkedInvestment 轉帳）
+        const deletedInvestmentIds = [];
+        const mainDeletedId = record.timestamp || record.id;
+        if (mainDeletedId) deletedInvestmentIds.push(String(mainDeletedId));
+        if (deletedBuyRecords.length > 0) {
+            deletedBuyRecords.forEach(r => {
+                const id = r.timestamp || r.id;
+                if (id) deletedInvestmentIds.push(String(id));
+            });
+        }
+
+        if (deletedInvestmentIds.length > 0) {
+            let accountingRecords = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+            const beforeLen = accountingRecords.length;
+            accountingRecords = accountingRecords.filter(ar => {
+                if (!ar) return false;
+                if (ar.type !== 'transfer') return true;
+                if (ar.linkedInvestment !== true) return true;
+                const invId = ar.investmentRecordId != null ? String(ar.investmentRecordId) : '';
+                return !deletedInvestmentIds.includes(invId);
+            });
+            if (accountingRecords.length !== beforeLen) {
+                localStorage.setItem('accountingRecords', JSON.stringify(accountingRecords));
+            }
+
+            // 若記帳本頁面有開著，刷新顯示
+            if (typeof updateLedgerSummary === 'function') {
+                updateLedgerSummary();
+            }
+            if (typeof displayLedgerTransactions === 'function') {
+                displayLedgerTransactions();
+            }
+        }
+
         localStorage.setItem('investmentRecords', JSON.stringify(records));
         console.log('記錄已刪除，ID:', recordIdStr);
         
