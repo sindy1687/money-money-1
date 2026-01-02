@@ -1924,6 +1924,11 @@ width: 100%;
     pointer-events: auto;
 }
 
+.record-card .record-quick-buy-fab {
+    top: 18px;
+    right: 96px;
+}
+
 /* 推薦 tab 分類卡片美化 */
 .category-item.recommended-category-item {
     padding: 18px 12px;
@@ -8615,23 +8620,20 @@ width: 100%;
     gap: 16px;
 }
 
-.record-card {
-    background: var(--bg-white);
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-    border: 2px solid transparent;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
- .record-card .record-menu-wrap {
-     top: 8px;
-     right: 6px;
+ .record-card {
+     background: var(--bg-white);
+     border-radius: 20px;
+     padding: 20px;
+     position: relative;
+     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+     border: 2px solid transparent;
+     transition: all 0.3s ease;
+     margin-bottom: 16px;
  }
 
  .record-card .record-menu {
+     top: 8px;
+     right: 6px;
      z-index: 10;
  }
 
