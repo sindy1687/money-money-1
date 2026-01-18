@@ -9150,70 +9150,99 @@ function showHistoryBackgroundSelector(modalContent) {
     fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
-            // 檢查文件大小（限制為 10MB）
-            if (file.size > 10 * 1024 * 1024) {
-                alert('圖片太大！請選擇小於 10MB 的圖片。');
+            // 檢查文件大小（手機放寬限制到 20MB）
+            const maxSize = 20 * 1024 * 1024; // 20MB
+            if (file.size > maxSize) {
+                alert(`圖片太大！請選擇小於 ${Math.round(maxSize / 1024 / 1024)}MB 的圖片。\n目前檔案大小：${Math.round(file.size / 1024 / 1024)}MB`);
                 fileInput.value = '';
                 return;
             }
             
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                let imageData = event.target.result;
-                
-                // 壓縮圖片（背景圖片使用較大尺寸和較高質量）
-                if (typeof compressImage === 'function') {
-                    try {
-                        imageData = await compressImage(imageData, 1920, 1080, 0.8);
-                        console.log('背景圖片已壓縮');
-                    } catch (error) {
-                        console.error('圖片壓縮失敗:', error);
+            // 顯示上傳進度提示
+            const progressMsg = document.createElement('div');
+            progressMsg.textContent = '正在處理圖片，請稍候...';
+            progressMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 15px 25px; border-radius: 8px; z-index: 10000;';
+            document.body.appendChild(progressMsg);
+            
+            try {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    let imageData = event.target.result;
+                    
+                    // 壓縮圖片（針對手機優化：更小尺寸，適中品質）
+                    if (typeof compressImage === 'function') {
+                        try {
+                            // 手機使用更激進的壓縮
+                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                            const maxWidth = isMobile ? 1280 : 1920;
+                            const maxHeight = isMobile ? 720 : 1080;
+                            const quality = isMobile ? 0.6 : 0.8;
+                            
+                            imageData = await compressImage(imageData, maxWidth, maxHeight, quality);
+                            console.log('背景圖片已壓縮（手機優化）');
+                        } catch (error) {
+                            console.error('圖片壓縮失敗:', error);
+                            // 壓縮失敗時使用原始圖片
+                        }
                     }
-                }
-                
-                // 保存到自訂背景列表
-                const customBackgrounds = JSON.parse(localStorage.getItem('customHistoryBackgrounds') || '[]');
-                const newBackground = {
-                    id: 'custom-' + Date.now(),
-                    url: imageData,
-                    name: file.name || '自訂背景',
-                    date: new Date().toISOString()
+                    
+                    // 保存到自訂背景列表
+                    const customBackgrounds = JSON.parse(localStorage.getItem('customHistoryBackgrounds') || '[]');
+                    const newBackground = {
+                        id: 'custom-' + Date.now(),
+                        url: imageData,
+                        name: file.name || '自訂背景',
+                        date: new Date().toISOString(),
+                        originalSize: file.size,
+                        compressed: imageData !== event.target.result
+                    };
+                    customBackgrounds.push(newBackground);
+                    localStorage.setItem('customHistoryBackgrounds', JSON.stringify(customBackgrounds));
+                    
+                    // 移除進度提示
+                    document.body.removeChild(progressMsg);
+                    
+                    // 重新渲染背景選項
+                    const grid = backgroundModal.querySelector('.background-options-grid');
+                    if (grid) {
+                        const savedBackground = localStorage.getItem('historyBackground') || '';
+                        const allOptions = [
+                            ...backgroundOptions.filter(opt => !opt.isCustom),
+                            ...customBackgrounds.map((bg, index) => ({ url: bg.url, name: bg.name || `自訂背景 ${index + 1}`, isCustom: true, id: bg.id || `custom-${index}` }))
+                        ];
+                        grid.innerHTML = allOptions.map((option, index) => {
+                            const isSelected = (option.url === savedBackground) || (option.url === '' && savedBackground === '');
+                            return `
+                                <div class="background-option ${isSelected ? 'selected' : ''}" data-url="${option.url}" data-custom="${option.isCustom ? 'true' : 'false'}" data-id="${option.id || ''}" style="position: relative; cursor: pointer; border-radius: 12px; overflow: hidden; border: 3px solid ${isSelected ? 'var(--color-primary)' : 'transparent'}; transition: all 0.2s;">
+                                    ${option.url ? `
+                                        <img src="${option.url}" alt="${option.name}" style="width: 100%; height: 120px; object-fit: cover; display: block;">
+                                    ` : `
+                                        <div style="width: 100%; height: 120px; background: var(--bg-light); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 14px;">無背景</div>
+                                    `}
+                                    <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 6px; font-size: 12px; text-align: center;">${option.name}</div>
+                                    ${isSelected ? '<div style="position: absolute; top: 8px; right: 8px; background: var(--color-primary); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;">✓</div>' : ''}
+                                    ${option.isCustom ? '<button class="delete-custom-background-btn" data-id="' + (option.id || '') + '" style="position: absolute; top: 8px; left: 8px; background: rgba(255,0,0,0.8); color: white; border: none; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; z-index: 10;" title="刪除">×</button>' : ''}
+                                </div>
+                            `;
+                        }).join('');
+                        bindBackgroundEvents();
+                    }
+
+                    fileInput.value = '';
                 };
-                customBackgrounds.push(newBackground);
-                localStorage.setItem('customHistoryBackgrounds', JSON.stringify(customBackgrounds));
-                
-                // 重新渲染背景選項
-                const grid = backgroundModal.querySelector('.background-options-grid');
-                if (grid) {
-                    const savedBackground = localStorage.getItem('historyBackground') || '';
-                    const allOptions = [
-                        ...backgroundOptions.filter(opt => !opt.isCustom),
-                        ...customBackgrounds.map((bg, index) => ({ url: bg.url, name: bg.name || `自訂背景 ${index + 1}`, isCustom: true, id: bg.id || `custom-${index}` }))
-                    ];
-                    grid.innerHTML = allOptions.map((option, index) => {
-                        const isSelected = (option.url === savedBackground) || (option.url === '' && savedBackground === '');
-                        return `
-                            <div class="background-option ${isSelected ? 'selected' : ''}" data-url="${option.url}" data-custom="${option.isCustom ? 'true' : 'false'}" data-id="${option.id || ''}" style="position: relative; cursor: pointer; border-radius: 12px; overflow: hidden; border: 3px solid ${isSelected ? 'var(--color-primary)' : 'transparent'}; transition: all 0.2s;">
-                                ${option.url ? `
-                                    <img src="${option.url}" alt="${option.name}" style="width: 100%; height: 120px; object-fit: cover; display: block;">
-                                ` : `
-                                    <div style="width: 100%; height: 120px; background: var(--bg-light); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 14px;">無背景</div>
-                                `}
-                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 6px; font-size: 12px; text-align: center;">${option.name}</div>
-                                ${isSelected ? '<div style="position: absolute; top: 8px; right: 8px; background: var(--color-primary); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;">✓</div>' : ''}
-                                ${option.isCustom ? '<button class="delete-custom-background-btn" data-id="' + (option.id || '') + '" style="position: absolute; top: 8px; left: 8px; background: rgba(255,0,0,0.8); color: white; border: none; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; z-index: 10;" title="刪除">×</button>' : ''}
-                            </div>
-                        `;
-                    }).join('');
-                    bindBackgroundEvents();
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('圖片處理失敗:', error);
+                // 移除進度提示
+                if (document.body.contains(progressMsg)) {
+                    document.body.removeChild(progressMsg);
                 }
-                
+                alert('圖片處理失敗，請重試');
                 fileInput.value = '';
-            };
-            reader.readAsDataURL(file);
+            }
         }
     });
-    
+
     // 綁定背景選擇和刪除事件
     const bindBackgroundEvents = () => {
         // 綁定選擇事件
