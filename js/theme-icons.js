@@ -273,6 +273,14 @@ const buttonIcons = {
         navInvestment: '⭐',
         navChart: '🌌',
         navSettings: '✨'
+    },
+    getrich: {
+        fab: '🧧',
+        navLedger: '📖',
+        navWallet: '💰',
+        navInvestment: '📈',
+        navChart: '📊',
+        navSettings: '⚙️'
     }
 };
 

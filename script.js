@@ -1162,13 +1162,14 @@ const prevCloseAttemptAt = {};
 const PREV_CLOSE_COOLDOWN_MS = 5 * 60 * 1000;
 
 const publicQuoteProxies = [
-    // Put Jina first: raw fetch (least likely to 404)
-    'https://r.jina.ai/http://',
-    // Returns JSON wrapper: { contents: "..." }
+    // 新的可用代理服務
     'https://api.allorigins.win/raw?url=',
-    // Usually returns raw proxied content
-    'https://api.codetabs.com/v1/proxy/?quest='
-    // 2025/01: corsproxy.io frequently 404，暫時移除以降低噪音
+    'https://api.codetabs.com/v1/proxy/?quest=',
+    // 備用代理
+    'https://corsproxy.io/?',
+    'https://cors-anywhere.herokuapp.com/',
+    // 暫時移除 r.jina.ai (503 錯誤)
+    // 'https://r.jina.ai/http://',
 ];
 
 function isProxyInCooldown(proxyBase) {
@@ -1198,10 +1199,12 @@ async function fetchPrevCloseFromTwseOtc(stockCode) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 8000);
                 let finalUrl;
-                if (proxyBase.includes('r.jina.ai')) {
-                    const cleaned = url.replace(/^https?:\/\//, '');
-                    finalUrl = `${proxyBase}${cleaned}`;
+                if (proxyBase.includes('corsproxy.io')) {
+                    finalUrl = `${proxyBase}${encodeURIComponent(url)}`;
+                } else if (proxyBase.includes('cors-anywhere')) {
+                    finalUrl = `${proxyBase}${url}`;
                 } else {
+                    // allorigins.win 和 codetabs.com
                     finalUrl = `${proxyBase}${encodeURIComponent(url)}`;
                 }
                 const resp = await fetch(finalUrl, { signal: controller.signal });
@@ -1275,10 +1278,12 @@ async function fetchPreviousCloseOnly(stockCode) {
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 8000);
                     let finalUrl;
-                    if (proxyBase.includes('r.jina.ai')) {
-                        const cleaned = yahooChartUrl.replace(/^https?:\/\//, '');
-                        finalUrl = `${proxyBase}${cleaned}`;
+                    if (proxyBase.includes('corsproxy.io')) {
+                        finalUrl = `${proxyBase}${encodeURIComponent(yahooChartUrl)}`;
+                    } else if (proxyBase.includes('cors-anywhere')) {
+                        finalUrl = `${proxyBase}${yahooChartUrl}`;
                     } else {
+                        // allorigins.win 和 codetabs.com
                         finalUrl = `${proxyBase}${encodeURIComponent(yahooChartUrl)}`;
                     }
                     const resp = await fetch(finalUrl, { signal: controller.signal });
@@ -1319,10 +1324,12 @@ async function fetchPreviousCloseOnly(stockCode) {
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 8000);
                     let finalUrl;
-                    if (proxyBase.includes('r.jina.ai')) {
-                        const cleaned = yahooQuoteUrl.replace(/^https?:\/\//, '');
-                        finalUrl = `${proxyBase}${cleaned}`;
+                    if (proxyBase.includes('corsproxy.io')) {
+                        finalUrl = `${proxyBase}${encodeURIComponent(yahooQuoteUrl)}`;
+                    } else if (proxyBase.includes('cors-anywhere')) {
+                        finalUrl = `${proxyBase}${yahooQuoteUrl}`;
                     } else {
+                        // allorigins.win 和 codetabs.com
                         finalUrl = `${proxyBase}${encodeURIComponent(yahooQuoteUrl)}`;
                     }
                     const resp = await fetch(finalUrl, { signal: controller.signal });
@@ -1384,10 +1391,12 @@ async function fetchYahooChartViaPublicProxies(yahooUrl, stockCode) {
             const timeoutId = setTimeout(() => controller.abort(), 10000);
             try {
                 let finalUrl;
-                if (proxyBase.includes('r.jina.ai')) {
-                    const cleaned = yahooUrl.replace(/^https?:\/\//, '');
-                    finalUrl = `${proxyBase}${cleaned}`;
+                if (proxyBase.includes('corsproxy.io')) {
+                    finalUrl = `${proxyBase}${encodeURIComponent(yahooUrl)}`;
+                } else if (proxyBase.includes('cors-anywhere')) {
+                    finalUrl = `${proxyBase}${yahooUrl}`;
                 } else {
+                    // allorigins.win 和 codetabs.com
                     finalUrl = `${proxyBase}${encodeURIComponent(yahooUrl)}`;
                 }
 
@@ -1405,7 +1414,7 @@ async function fetchYahooChartViaPublicProxies(yahooUrl, stockCode) {
                     }
                 } catch (_) {}
 
-                // r.jina.ai returns HTML-ish wrapper; try to extract JSON by finding first '{'
+                // 
                 const firstBrace = raw.indexOf('{');
                 if (firstBrace > 0) raw = raw.slice(firstBrace);
 

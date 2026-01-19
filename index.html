@@ -8,8 +8,12 @@
     <link rel="alternate icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ff69b4'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white'>💰</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="flame-theme.css">
+    <link rel="stylesheet" href="shinchan-theme.css">
+    <link rel="stylesheet" href="shinchan-pool-theme.css">
+    <link rel="stylesheet" href="festive-theme.css">
+    <link rel="stylesheet" href="dreamy-galaxy-theme.css">
+    <link rel="stylesheet" href="whimsical-starry-theme.css">
     <link rel="stylesheet" href="searchHistory.css">
-    <link rel="stylesheet" href="css/investment-analysis.css">
     <link rel="stylesheet" href="css/smart-accounting.css">
     <link rel="stylesheet" href="css/smart-reminders.css">
     
@@ -27,6 +31,9 @@
         </video>
         <video id="spaceThemeVideo" class="theme-video" autoplay loop muted playsinline preload="auto">
             <source src="https://v1.pinimg.com/videos/iht/720p/4e/00/d1/4e00d1999152ab007ebe4aef36d5e2c9.mp4" type="video/mp4">
+        </video>
+        <video id="shinchanPoolThemeVideo" class="theme-video" autoplay loop muted playsinline preload="auto">
+            <source src="https://v1.pinimg.com/videos/iht/expMp4/76/35/eb/7635eb2cc1d1c08a867742f7144faf11_720w.mp4" type="video/mp4">
         </video>
         <div class="theme-video-gradient"></div>
     </div>
@@ -505,7 +512,7 @@
         </div>
 
         <!-- 浮動添加按鈕 -->
-        <button class="fab-btn" id="fabBtn">💰</button>
+        <button class="fab-btn" id="fabBtn">🧧</button>
     </div>
 
     <!-- 圖表分析頁面 -->
@@ -1056,8 +1063,6 @@
                         <button class="dca-action-btn-large" id="investmentDCABtn" title="定期定額">📅 定期定額</button>
                         <button class="side-action-btn" id="investmentAllocationBtn" title="股債配置" style="display: none;">⚖️ 股債配置</button>
                         <button class="side-action-btn" id="investmentRebalanceBtn" title="年度再平衡">🔁 年度再平衡</button>
-                        <button class="side-action-btn" id="portfolioAnalysisBtn" title="投資組合分析">📊 組合分析</button>
-                        <button class="side-action-btn" id="goalTrackingBtn" title="目標追蹤">🎯 目標追蹤</button>
                     </div>
                     <span class="stock-count" id="stockCount">0 檔</span>
                 </div>
@@ -1197,64 +1202,6 @@
                     </div>
                 </div>
             </button>
-        </div>
-
-        <!-- 投資組合分析彈窗 -->
-        <div class="portfolio-analysis-modal" id="portfolioAnalysisModal" style="display: none;">
-            <div class="portfolio-analysis-content">
-                <div class="portfolio-analysis-header">
-                    <h3>📊 投資組合分析</h3>
-                    <button class="portfolio-analysis-close-btn" id="portfolioAnalysisCloseBtn">✕</button>
-                </div>
-                <div class="portfolio-analysis-body">
-                    <div class="analysis-section" id="portfolioSummary">
-                        <!-- 投資組合概況 -->
-                    </div>
-                    <div class="analysis-section" id="portfolioRisk">
-                        <!-- 風險評估 -->
-                    </div>
-                    <div class="analysis-section" id="portfolioDiversification">
-                        <!-- 分散度分析 -->
-                    </div>
-                    <div class="analysis-section" id="portfolioPerformance">
-                        <!-- 績效分析 -->
-                    </div>
-                    <div class="analysis-section" id="portfolioInsights">
-                        <!-- 投資洞察 -->
-                    </div>
-                    <div class="analysis-section" id="portfolioRecommendations">
-                        <!-- 改善建議 -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 投資目標追蹤彈窗 -->
-        <div class="goal-tracking-modal" id="goalTrackingModal" style="display: none;">
-            <div class="goal-tracking-content">
-                <div class="goal-tracking-header">
-                    <h3>🎯 投資目標追蹤</h3>
-                    <button class="goal-tracking-close-btn" id="goalTrackingCloseBtn">✕</button>
-                </div>
-                <div class="goal-tracking-body">
-                    <div class="goal-overview" id="goalOverview">
-                        <!-- 目標概況 -->
-                    </div>
-                    <div class="goal-list" id="goalList">
-                        <!-- 個別目標進度 -->
-                    </div>
-                    <div class="goal-insights" id="goalInsights">
-                        <!-- 目標洞察 -->
-                    </div>
-                    <div class="goal-recommendations" id="goalRecommendations">
-                        <!-- 改善建議 -->
-                    </div>
-                    <div class="goal-actions">
-                        <button class="goal-action-btn" id="addGoalBtn">➕ 新增目標</button>
-                        <button class="goal-action-btn" id="editGoalBtn">✏️ 編輯目標</button>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- 個股詳情頁面 -->
@@ -2075,10 +2022,6 @@
     <script src="js/smart-reminders.js"></script>
     <!-- 性能優化器 -->
     <script src="js/performance-optimizer-simple.js"></script>
-    <!-- 投資分析增強功能 -->
-    <script src="js/investment-analysis.js"></script>
-    <!-- 投資分析整合功能 -->
-    <script src="js/investment-analysis-integration.js"></script>
     <!-- 強制蝴蝶忍主題卡費文字白色 -->
     <script src="force_fee_white.js"></script>
     <!-- 住房物業分類顏色修復 -->
