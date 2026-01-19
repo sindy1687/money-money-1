@@ -2339,7 +2339,7 @@
 
 :root[data-theme="spacegold"] .fab-btn {
     position: fixed;
-    bottom: 120px;
+    bottom: 180px;
     right: 20px;
     background: linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 90%, var(--color-primary-dark)) 100%) !important;
     color: var(--text-white) !important;
@@ -2357,6 +2357,17 @@
     transition: all 0.3s ease;
     overflow: hidden;
     z-index: 99;
+}
+
+/* spacegold 主題小螢幕適配 */
+@media (max-width: 575px) {
+    :root[data-theme="spacegold"] .fab-btn {
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 20px !important;
+        bottom: 130px !important;
+        right: 16px !important;
+    }
 }
 
 :root[data-theme="spacegold"] .fab-btn::before {
@@ -6280,7 +6291,7 @@ width: 100%;
 
 .page-ledger {
     min-height: calc(100vh - 60px);
-    padding-bottom: 100px;
+    padding-bottom: 160px;
     background: var(--bg-light-gradient-reverse);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -6322,7 +6333,7 @@ width: 100%;
 
 .next-month-bills-page-content {
     padding: 16px;
-    padding-bottom: 100px;
+    padding-bottom: 160px;
 }
 
 /* 響應式：頁面內邊距調整 */
@@ -6676,10 +6687,11 @@ width: 100%;
 
 .ledger-list {
     padding: var(--spacing-sm) 16px;
+    padding-bottom: 160px;
     background: transparent;
     overflow-y: auto;
-    max-height: calc(100vh - 300px);
     -webkit-overflow-scrolling: touch;
+    max-height: calc(100vh - 300px);
 }
 
 .transaction-group {
@@ -7166,8 +7178,9 @@ width: 100%;
     padding: 20px;
     text-align: center;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
+    justify-content: center;
     gap: 16px;
 }
 
@@ -7271,6 +7284,7 @@ width: 100%;
     .history-btn-container {
         padding: 16px;
         gap: 12px;
+        flex-direction: column;
     }
     
     .daily-expense-in-history {
@@ -7293,6 +7307,11 @@ width: 100%;
         font-size: 14px;
         width: 100%;
         max-width: 300px;
+    }
+    
+    .fab-btn {
+        margin-left: 0;
+        margin-top: 8px;
     }
     
     .history-btn-icon {
@@ -7322,32 +7341,36 @@ width: 100%;
 /* ========== 浮動添加按鈕 ========== */
 .fab-btn {
     position: fixed;
-    bottom: 120px;
-    right: 20px;
+    bottom: 80px;
+    right: max(16px, calc((100vw - 1200px) / 2 + 24px));
     font-family: 
         'SF Pro Display', 'Helvetica Neue', 'Arial',
         -apple-system, BlinkMacSystemFont,
-        'PingFang TC', 'PingFang SC', 'Microsoft JhengHei', 'Microsoft YaHei',
-        'Noto Sans TC', 'Noto Sans SC', 'Source Han Sans TC', 'Source Han Sans SC',
-        sans-serif;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+        'PingFang TC', 'PingFang SC', 'Microsoft JhengHei', 'Microsoft YaHei';
     width: 56px;
     height: 56px;
-    border: none;
     border-radius: var(--radius-full);
     background: var(--bg-gradient);
     color: var(--text-white);
     font-size: var(--font-xxl);
     cursor: pointer;
-    box-shadow: var(--shadow-primary-lg);
-    z-index: 99;
+    box-shadow: var(--shadow-primary);
     transition: all var(--transition-base);
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 4000;
+}
+
+/* 響應式：小螢幕適配 */
+@media (max-width: 575px) {
+    .fab-btn {
+        right: 16px;
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+        bottom: calc(120px + env(safe-area-inset-bottom));
+    }
 }
 
 /* 響應式：浮動按鈕位置調整 */
@@ -21964,9 +21987,9 @@ transform: scale(0.99);
     /* 優化浮動按鈕位置 */
     .fab-btn {
         box-shadow: 0 4px 12px rgba(255, 105, 180, 0.4);
-        /* 考慮安全區域 */
-        bottom: calc(80px + env(safe-area-inset-bottom));
-        right: calc(20px + env(safe-area-inset-right));
+        /* 考慮安全區域，確保不被底部導航遮擋 */
+        bottom: calc(120px + env(safe-area-inset-bottom));
+        right: calc(16px + env(safe-area-inset-right));
     }
     
     /* 優化底部導航欄 */
@@ -22092,7 +22115,7 @@ transform: scale(0.99);
     }
     
     .fab-btn {
-        bottom: max(90px, calc(90px + env(safe-area-inset-bottom)));
+        bottom: max(180px, calc(180px + env(safe-area-inset-bottom)));
     }
 }
 
@@ -36248,6 +36271,8 @@ html:has([data-theme="shinobu"]) *[class*="budget-remaining"] {
     background: linear-gradient(135deg, var(--color-secondary) 0%, color-mix(in srgb, var(--color-secondary) 90%, var(--color-primary)) 100%) !important;
     color: var(--text-white) !important;
     box-shadow: 0 8px 24px rgba(255, 215, 0, 0.4) !important;
+    bottom: 120px !important;
+    right: 16px !important;
     border: 2px solid var(--color-secondary-rgba-30) !important;
     font-family: var(--font-primary) !important;
     font-weight: var(--font-weight-black) !important;
@@ -36261,7 +36286,18 @@ html:has([data-theme="shinobu"]) *[class*="budget-remaining"] {
     justify-content: center !important;
     transition: all 0.3s ease !important;
     overflow: hidden !important;
-    z-index: 99 !important;
+    z-index: 4000 !important;
+}
+
+/* getrich 主題小螢幕適配 */
+@media (max-width: 575px) {
+    :root[data-theme="getrich"] .fab-btn {
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 20px !important;
+        bottom: 130px !important;
+        right: 16px !important;
+    }
 }
 
 :root[data-theme="getrich"] .fab-btn:hover {
@@ -36511,6 +36547,209 @@ html:has([data-theme="shinobu"]) *[class*="budget-remaining"] {
 }
 
 /* 帳戶選擇 */
+:root[data-theme="getrich"] .account-item-name,
+:root[data-theme="getrich"] .account-item-currency {
+    color: var(--text-secondary) !important;
+    font-family: var(--font-secondary) !important;
+    font-weight: var(--font-weight-normal) !important;
+    letter-spacing: var(--letter-spacing-normal) !important;
+}
+
+/* ========== 統一響應式控制 - 確保手機和電腦版顯示一致 ========== */
+
+/* 基礎響應式容器 */
+.app-container {
+    max-width: 100%;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0;
+}
+
+/* 統一主題背景圖片顯示 */
+.theme-video-background video,
+.theme-video-background .theme-video-gradient {
+    object-fit: cover !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+}
+
+/* 統一頁面容器 */
+.page-ledger,
+.page-input,
+.page-chart,
+.page-budget,
+.page-monthly-planner,
+.page-daily-budget,
+.page-settings,
+.page-category-manage,
+.page-investment,
+.page-wallet,
+.page-history,
+.page-planner {
+    max-width: 100% !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: var(--spacing-lg) !important;
+    box-sizing: border-box !important;
+}
+
+/* 統一卡片系統 */
+.card,
+.record-card,
+.budget-item,
+.stock-item-card,
+.investment-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* 統一網格系統 */
+.category-grid,
+.budget-grid,
+.investment-grid,
+.overview-summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: var(--spacing-md) !important;
+    width: 100% !important;
+}
+
+/* 統一按鈕系統 */
+.fab-btn,
+.nav-item,
+.btn-primary,
+.btn-secondary {
+    min-height: 56px !important;
+    min-width: 56px !important;
+    max-width: none !important;
+}
+
+/* 統一文字大小 */
+body {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+}
+
+/* 統一輸入框 */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+    font-size: 16px !important;
+    min-height: 48px !important;
+    padding: 12px !important;
+}
+
+/* 強制手機版使用與電腦版相同的佈局 */
+@media (max-width: 768px) {
+    .app-container {
+        padding: var(--spacing-md) !important;
+    }
+    
+    .page-ledger,
+    .page-input,
+    .page-chart,
+    .page-budget,
+    .page-monthly-planner,
+    .page-daily-budget,
+    .page-settings,
+    .page-category-manage,
+    .page-investment,
+    .page-wallet,
+    .page-history,
+    .page-planner {
+        padding: var(--spacing-md) !important;
+    }
+    
+    /* 保持網格佈局，不強制單列 */
+    .category-grid,
+    .budget-grid,
+    .investment-grid,
+    .overview-summary-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+    }
+}
+
+/* 超小螢幕優化 */
+@media (max-width: 480px) {
+    .app-container {
+        padding: var(--spacing-sm) !important;
+    }
+    
+    .page-ledger,
+    .page-input,
+    .page-chart,
+    .page-budget,
+    .page-monthly-planner,
+    .page-daily-budget,
+    .page-settings,
+    .page-category-manage,
+    .page-investment,
+    .page-wallet,
+    .page-history,
+    .page-planner {
+        padding: var(--spacing-sm) !important;
+    }
+    
+    /* 超小螢幕才單列 */
+    .category-grid,
+    .budget-grid,
+    .investment-grid,
+    .overview-summary-grid {
+        grid-template-columns: 1fr !important;
+        gap: var(--spacing-sm) !important;
+    }
+}
+
+/* 禁用手機專用的特殊樣式，確保一致性 */
+@media (max-width: 576px) {
+    /* 保持原有的間距和大小，不縮小 */
+    .header-tabs {
+        gap: var(--spacing-sm) !important;
+    }
+    
+    .ledger-type-tabs {
+        gap: var(--spacing-sm) !important;
+        padding: var(--spacing-sm) !important;
+    }
+    
+    .nav-item {
+        min-height: 56px !important;
+        padding: 8px 4px !important;
+    }
+    
+    .fab-btn {
+        width: 56px !important;
+        height: 56px !important;
+        right: var(--spacing-lg) !important;
+        bottom: var(--spacing-lg) !important;
+    }
+}
+
+/* 確保主題背景在所有設備上正確顯示 */
+:root[data-theme*="money"] body,
+:root[data-theme*="space"] body,
+:root[data-theme*="neon"] body,
+:root[data-theme*="totoro"] body,
+:root[data-theme*="noface"] body,
+:root[data-theme*="demonslayer"] body,
+:root[data-theme*="dreamyfish"] body,
+:root[data-theme*="meow"] body,
+:root[data-theme*="elegant"] body,
+:root[data-theme*="fruit"] body,
+:root[data-theme*="emerald"] body,
+:root[data-theme*="getrich"] body {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+}
 :root[data-theme="getrich"] .account-item-name,
 :root[data-theme="getrich"] .account-item-currency {
     color: var(--text-secondary) !important;
