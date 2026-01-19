@@ -1163,11 +1163,9 @@ const PREV_CLOSE_COOLDOWN_MS = 5 * 60 * 1000;
 
 const publicQuoteProxies = [
     // 新的可用代理服務
-    'https://api.allorigins.win/raw?url=',
     'https://api.codetabs.com/v1/proxy/?quest=',
-    // 備用代理
     'https://corsproxy.io/?',
-    'https://cors-anywhere.herokuapp.com/',
+    // cors-anywhere.herokuapp.com 已經不可用，完全移除
     // 暫時移除 r.jina.ai (503 錯誤)
     // 'https://r.jina.ai/http://',
 ];
@@ -1201,10 +1199,8 @@ async function fetchPrevCloseFromTwseOtc(stockCode) {
                 let finalUrl;
                 if (proxyBase.includes('corsproxy.io')) {
                     finalUrl = `${proxyBase}${encodeURIComponent(url)}`;
-                } else if (proxyBase.includes('cors-anywhere')) {
-                    finalUrl = `${proxyBase}${url}`;
                 } else {
-                    // allorigins.win 和 codetabs.com
+                    // codetabs.com 和其他代理
                     finalUrl = `${proxyBase}${encodeURIComponent(url)}`;
                 }
                 const resp = await fetch(finalUrl, { signal: controller.signal });
@@ -1280,10 +1276,8 @@ async function fetchPreviousCloseOnly(stockCode) {
                     let finalUrl;
                     if (proxyBase.includes('corsproxy.io')) {
                         finalUrl = `${proxyBase}${encodeURIComponent(yahooChartUrl)}`;
-                    } else if (proxyBase.includes('cors-anywhere')) {
-                        finalUrl = `${proxyBase}${yahooChartUrl}`;
                     } else {
-                        // allorigins.win 和 codetabs.com
+                        // codetabs.com 和其他代理
                         finalUrl = `${proxyBase}${encodeURIComponent(yahooChartUrl)}`;
                     }
                     const resp = await fetch(finalUrl, { signal: controller.signal });
@@ -1326,10 +1320,8 @@ async function fetchPreviousCloseOnly(stockCode) {
                     let finalUrl;
                     if (proxyBase.includes('corsproxy.io')) {
                         finalUrl = `${proxyBase}${encodeURIComponent(yahooQuoteUrl)}`;
-                    } else if (proxyBase.includes('cors-anywhere')) {
-                        finalUrl = `${proxyBase}${yahooQuoteUrl}`;
                     } else {
-                        // allorigins.win 和 codetabs.com
+                        // codetabs.com 和其他代理
                         finalUrl = `${proxyBase}${encodeURIComponent(yahooQuoteUrl)}`;
                     }
                     const resp = await fetch(finalUrl, { signal: controller.signal });
@@ -1393,10 +1385,8 @@ async function fetchYahooChartViaPublicProxies(yahooUrl, stockCode) {
                 let finalUrl;
                 if (proxyBase.includes('corsproxy.io')) {
                     finalUrl = `${proxyBase}${encodeURIComponent(yahooUrl)}`;
-                } else if (proxyBase.includes('cors-anywhere')) {
-                    finalUrl = `${proxyBase}${yahooUrl}`;
                 } else {
-                    // allorigins.win 和 codetabs.com
+                    // codetabs.com 和其他代理
                     finalUrl = `${proxyBase}${encodeURIComponent(yahooUrl)}`;
                 }
 
@@ -14669,6 +14659,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化下月計入選項
     initNextMonthOption();
     
+    // 初始化主題系統
+    if (typeof getCurrentTheme === 'function' && typeof applyTheme === 'function') {
+        const savedTheme = getCurrentTheme();
+        applyTheme(savedTheme);
+        console.log('✅ 主題系統已初始化，當前主題:', savedTheme);
+    } else {
+        console.warn('⚠️ 主題系統函數未找到');
+    }
+    
     // 防止所有輸入框focus時自動滾動（手機適配，防止數字鍵盤移位）
     setTimeout(() => {
         const allInputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea');
@@ -14785,6 +14784,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (settingsBackBtn) {
         settingsBackBtn.addEventListener('click', () => {
             goBackToLedger();
+        });
+    }
+    
+    // 初始化智慧提醒按鈕
+    const smartRemindersBtn = document.getElementById('smartRemindersBtn');
+    if (smartRemindersBtn) {
+        smartRemindersBtn.addEventListener('click', () => {
+            if (window.smartReminderSystem && typeof window.smartReminderSystem.showReminderPanel === 'function') {
+                window.smartReminderSystem.showReminderPanel();
+            } else {
+                console.warn('智慧提醒系統未載入');
+                alert('智慧提醒系統正在載入中，請稍後再試...');
+            }
         });
     }
     
