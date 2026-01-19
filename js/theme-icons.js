@@ -226,15 +226,7 @@ const buttonIcons = {
         navChart: '🦋',
         navSettings: '✨'
     },
-    chick: {
-        fab: '🐥',
-        navLedger: '🐣',
-        navWallet: '🐤',
-        navInvestment: '🐥',
-        navChart: '🐣',
-        navSettings: '🐤'
-    },
-    dreamyfish: {
+        dreamyfish: {
         fab: '🐠',
         navLedger: '🐟',
         navWallet: '🐡',

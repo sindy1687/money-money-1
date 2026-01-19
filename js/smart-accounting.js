@@ -192,13 +192,24 @@ function calculateTimeScore(hour, patterns) {
 // 支出模式分析功能
 function analyzeSpendingPattern(records, period = 'monthly') {
     if (!records || records.length === 0) {
-        return null;
+        return {
+            period: period,
+            totalSpent: 0,
+            transactionCount: 0,
+            categoryBreakdown: {},
+            dailyAverage: 0,
+            topCategories: [],
+            spendingTrends: {},
+            insights: [],
+            recommendations: [],
+            error: '沒有足夠的數據進行分析'
+        };
     }
     
     const analysis = {
         period: period,
         totalSpent: 0,
-        transactionCount: records.length,
+        transactionCount: 0,
         categoryBreakdown: {},
         dailyAverage: 0,
         topCategories: [],
@@ -207,20 +218,24 @@ function analyzeSpendingPattern(records, period = 'monthly') {
         recommendations: []
     };
     
-    // 1. 基本統計
-    records.forEach(record => {
-        if (record.type === 'expense' || record.type === '支出') {
-            const amount = parseFloat(record.amount) || 0;
-            const category = record.category || '未分類';
-            
-            analysis.totalSpent += amount;
-            analysis.categoryBreakdown[category] = (analysis.categoryBreakdown[category] || 0) + amount;
-        }
+    // 1. 基本統計 - 只分析支出記錄
+    const expenseRecords = records.filter(record => 
+        record.type === 'expense' || record.type === '支出'
+    );
+    
+    analysis.transactionCount = expenseRecords.length;
+    
+    expenseRecords.forEach(record => {
+        const amount = parseFloat(record.amount) || 0;
+        const category = record.category || '未分類';
+        
+        analysis.totalSpent += amount;
+        analysis.categoryBreakdown[category] = (analysis.categoryBreakdown[category] || 0) + amount;
     });
     
     // 2. 計算日均消費
-    const daysInPeriod = getDaysInPeriod(records, period);
-    analysis.dailyAverage = analysis.totalSpent / daysInPeriod;
+    const daysInPeriod = getDaysInPeriod(expenseRecords, period);
+    analysis.dailyAverage = daysInPeriod > 0 ? analysis.totalSpent / daysInPeriod : 0;
     
     // 3. 排序分類
     analysis.topCategories = Object.entries(analysis.categoryBreakdown)
@@ -229,11 +244,11 @@ function analyzeSpendingPattern(records, period = 'monthly') {
         .map(([category, amount]) => ({
             category,
             amount,
-            percentage: Math.round((amount / analysis.totalSpent) * 100)
+            percentage: analysis.totalSpent > 0 ? Math.round((amount / analysis.totalSpent) * 100) : 0
         }));
     
     // 4. 分析消費趨勢
-    analysis.spendingTrends = analyzeSpendingTrends(records);
+    analysis.spendingTrends = analyzeSpendingTrends(expenseRecords);
     
     // 5. 生成洞察
     analysis.insights = generateSpendingInsights(analysis);
@@ -291,7 +306,7 @@ function generateSpendingInsights(analysis) {
     const insights = [];
     
     // 1. 主要消費類別洞察
-    if (analysis.topCategories.length > 0) {
+    if (analysis.topCategories && analysis.topCategories.length > 0) {
         const topCategory = analysis.topCategories[0];
         insights.push({
             type: 'top_category',
@@ -302,7 +317,7 @@ function generateSpendingInsights(analysis) {
     }
     
     // 2. 日均消費洞察
-    if (analysis.dailyAverage > 1000) {
+    if (analysis.dailyAverage && analysis.dailyAverage > 1000) {
         insights.push({
             type: 'high_daily_spending',
             title: '日均消費較高',
@@ -311,20 +326,38 @@ function generateSpendingInsights(analysis) {
         });
     }
     
-    // 3. 週末消費洞察
-    const weekendSpending = (analysis.spendingTrends.weeklyPattern['週六'] || 0) + 
-                            (analysis.spendingTrends.weeklyPattern['週日'] || 0);
-    const weekdaySpending = Object.entries(analysis.spendingTrends.weeklyPattern)
-        .filter(([day]) => !['週六', '週日'].includes(day))
-        .reduce((sum, [,amount]) => sum + amount, 0);
+    // 3. 週末消費洞察 - 修復計算邏輯
+    if (analysis.spendingTrends && analysis.spendingTrends.weeklyPattern) {
+        const weekendSpending = (analysis.spendingTrends.weeklyPattern['週六'] || 0) + 
+                                (analysis.spendingTrends.weeklyPattern['週日'] || 0);
+        
+        const weekdayDays = ['週一', '週二', '週三', '週四', '週五'];
+        const weekdaySpending = weekdayDays.reduce((sum, day) => {
+            return sum + (analysis.spendingTrends.weeklyPattern[day] || 0);
+        }, 0);
+        
+        // 只有當平日消費大於0時才進行比較
+        if (weekdaySpending > 0 && weekendSpending > weekdaySpending / 5 * 2) {
+            insights.push({
+                type: 'weekend_spending',
+                title: '週末消費偏高',
+                content: '您的週末消費顯著高於平日，建議注意週末消費控制',
+                level: 'info'
+            });
+        }
+    }
     
-    if (weekendSpending > weekdaySpending / 5 * 2) { // 週末消費超過平日20%
-        insights.push({
-            type: 'weekend_spending',
-            title: '週末消費偏高',
-            content: '您的週末消費顯著高於平日，建議注意週末消費控制',
-            level: 'info'
-        });
+    // 4. 消費頻率洞察
+    if (analysis.transactionCount && analysis.totalSpent) {
+        const avgTransaction = analysis.totalSpent / analysis.transactionCount;
+        if (avgTransaction > 500) {
+            insights.push({
+                type: 'high_avg_transaction',
+                title: '平均交易金額較高',
+                content: `您的平均交易金額為NT$${Math.round(avgTransaction)}，建議檢視大額消費`,
+                level: 'warning'
+            });
+        }
     }
     
     return insights;
@@ -335,7 +368,7 @@ function generateSpendingRecommendations(analysis) {
     const recommendations = [];
     
     // 1. 預算建議
-    if (analysis.topCategories.length > 0) {
+    if (analysis.topCategories && analysis.topCategories.length > 0) {
         const topCategory = analysis.topCategories[0];
         if (topCategory.percentage > 40) {
             recommendations.push({
@@ -348,24 +381,89 @@ function generateSpendingRecommendations(analysis) {
         }
     }
     
-    // 2. 儲蓄建議
-    const suggestedSavings = Math.round(analysis.totalSpent * 0.2); // 建議儲蓄20%
-    recommendations.push({
-        type: 'savings_goal',
-        title: '儲蓄目標建議',
-        content: `基於您目前的消費水平，建議每月儲蓄NT$${suggestedSavings}`,
-        action: 'set_savings_goal',
-        amount: suggestedSavings
-    });
+    // 2. 智能儲蓄建議
+    if (analysis.totalSpent && analysis.totalSpent > 0) {
+        // 計算月度消費估算
+        const monthlySpendingEstimate = analysis.dailyAverage * 30;
+        let suggestedSavings;
+        let savingsMessage;
+        let savingsLevel;
+        
+        // 根據消費水平給出不同的儲蓄建議
+        if (analysis.dailyAverage < 300) {
+            suggestedSavings = Math.round(monthlySpendingEstimate * 0.4); // 低消費者建議儲蓄40%
+            savingsMessage = `您的日均消費較低(NT$${Math.round(analysis.dailyAverage)})，建議每月儲蓄NT$${suggestedSavings}，培養儲蓄習慣`;
+            savingsLevel = 'beginner';
+        } else if (analysis.dailyAverage < 800) {
+            suggestedSavings = Math.round(monthlySpendingEstimate * 0.3); // 中低消費者建議儲蓄30%
+            savingsMessage = `建議每月儲蓄NT$${suggestedSavings}，約為月消費的30%，建立穩定的儲蓄計劃`;
+            savingsLevel = 'intermediate';
+        } else if (analysis.dailyAverage < 1500) {
+            suggestedSavings = Math.round(monthlySpendingEstimate * 0.25); // 中等消費者建議儲蓄25%
+            savingsMessage = `建議每月儲蓄NT$${suggestedSavings}，約為月消費的25%，平衡消費與儲蓄`;
+            savingsLevel = 'balanced';
+        } else if (analysis.dailyAverage < 3000) {
+            suggestedSavings = Math.round(monthlySpendingEstimate * 0.2); // 高消費者建議儲蓄20%
+            savingsMessage = `您的消費水平較高，建議每月儲蓄NT$${suggestedSavings}，約為月消費的20%`;
+            savingsLevel = 'advanced';
+        } else {
+            suggestedSavings = Math.round(monthlySpendingEstimate * 0.15); // 很高消費者建議儲蓄15%
+            savingsMessage = `您的日均消費較高(NT$${Math.round(analysis.dailyAverage)})，建議每月儲蓄NT$${suggestedSavings}，控制消費並增加儲蓄`;
+            savingsLevel = 'high_spender';
+        }
+        
+        // 根據儲蓄水平調整建議金額，確保合理性
+        if (savingsLevel === 'beginner') {
+            suggestedSavings = Math.max(500, Math.min(suggestedSavings, 5000)); // 新手：500-5000
+        } else if (savingsLevel === 'intermediate') {
+            suggestedSavings = Math.max(1000, Math.min(suggestedSavings, 10000)); // 中級：1000-10000
+        } else if (savingsLevel === 'balanced') {
+            suggestedSavings = Math.max(2000, Math.min(suggestedSavings, 15000)); // 平衡：2000-15000
+        } else if (savingsLevel === 'advanced') {
+            suggestedSavings = Math.max(3000, Math.min(suggestedSavings, 20000)); // 高級：3000-20000
+        } else {
+            suggestedSavings = Math.max(5000, Math.min(suggestedSavings, 25000)); // 高消費：5000-25000
+        }
+        
+        // 添加額外的儲蓄建議
+        let additionalTip = '';
+        if (savingsLevel === 'high_spender') {
+            additionalTip = '，建議先檢視並削減非必要支出';
+        } else if (savingsLevel === 'beginner') {
+            additionalTip = '，可以從小額開始，逐步增加';
+        }
+        
+        recommendations.push({
+            type: 'savings_goal',
+            title: '儲蓄目標建議',
+            content: savingsMessage + additionalTip,
+            action: 'set_savings_goal',
+            amount: suggestedSavings,
+            level: savingsLevel
+        });
+    }
     
     // 3. 消費習慣建議
-    if (analysis.dailyAverage > 500) {
+    if (analysis.dailyAverage && analysis.dailyAverage > 500) {
         recommendations.push({
             type: 'spending_habit',
             title: '消費習慣優化',
             content: '建議記錄每筆消費的動機，幫助識別不必要的開支',
             action: 'track_spending_motivation'
         });
+    }
+    
+    // 4. 分散消費建議
+    if (analysis.topCategories && analysis.topCategories.length > 0) {
+        const topCategory = analysis.topCategories[0];
+        if (topCategory.percentage > 60) {
+            recommendations.push({
+                type: 'diversify_spending',
+                title: '分散消費建議',
+                content: `您的${topCategory.category}消費佔比過高，建議考慮分散消費到其他類別`,
+                action: 'review_categories'
+            });
+        }
     }
     
     return recommendations;

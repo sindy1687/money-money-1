@@ -410,8 +410,52 @@ class SmartAccountingManager {
             existingPanel.remove();
         }
         
+        // 檢查分析結果
+        if (!analysis) {
+            this.showErrorMessage('無法進行支出分析，請確保有足夠的記帳數據');
+            return;
+        }
+        
+        // 檢查是否有錯誤
+        if (analysis.error) {
+            this.showErrorMessage(analysis.error);
+            return;
+        }
+        
         const panel = document.createElement('div');
         panel.className = 'spending-analysis-panel';
+        
+        // 生成洞察HTML
+        const insightsHtml = analysis.insights && analysis.insights.length > 0 ? 
+            analysis.insights.map(insight => `
+                <div class="insight-item ${insight.level || 'info'}">
+                    <div class="insight-title">${insight.title}</div>
+                    <div class="insight-content">${insight.content}</div>
+                </div>
+            `).join('') : 
+            '<div class="no-data">暫無消費洞察</div>';
+        
+        // 生成建議HTML
+        const recommendationsHtml = analysis.recommendations && analysis.recommendations.length > 0 ?
+            analysis.recommendations.map(rec => `
+                <div class="recommendation-item">
+                    <div class="recommendation-title">${rec.title}</div>
+                    <div class="recommendation-content">${rec.content}</div>
+                </div>
+            `).join('') :
+            '<div class="no-data">暫無改善建議</div>';
+        
+        // 生成分類HTML
+        const categoriesHtml = analysis.topCategories && analysis.topCategories.length > 0 ?
+            analysis.topCategories.map(cat => `
+                <div class="category-item">
+                    <span class="category-name">${cat.category}</span>
+                    <span class="category-amount">NT$${(cat.amount || 0).toLocaleString()}</span>
+                    <span class="category-percent">${cat.percentage || 0}%</span>
+                </div>
+            `).join('') :
+            '<div class="no-data">暫無分類數據</div>';
+        
         panel.innerHTML = `
             <div class="panel-header">
                 <h3>📊 支出模式分析</h3>
@@ -421,52 +465,61 @@ class SmartAccountingManager {
                 <div class="analysis-summary">
                     <div class="summary-item">
                         <span class="summary-label">總支出</span>
-                        <span class="summary-value">NT$${analysis.totalSpent.toLocaleString()}</span>
+                        <span class="summary-value">NT$${(analysis.totalSpent || 0).toLocaleString()}</span>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">交易次數</span>
-                        <span class="summary-value">${analysis.transactionCount}</span>
+                        <span class="summary-value">${analysis.transactionCount || 0}</span>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">日均消費</span>
-                        <span class="summary-value">NT$${Math.round(analysis.dailyAverage)}</span>
+                        <span class="summary-value">NT$${Math.round(analysis.dailyAverage || 0)}</span>
                     </div>
                 </div>
                 
                 <div class="top-categories">
                     <h4>主要消費類別</h4>
-                    ${analysis.topCategories.map(cat => `
-                        <div class="category-item">
-                            <span class="category-name">${cat.category}</span>
-                            <span class="category-amount">NT$${cat.amount.toLocaleString()}</span>
-                            <span class="category-percent">${cat.percentage}%</span>
-                        </div>
-                    `).join('')}
+                    ${categoriesHtml}
                 </div>
                 
                 <div class="insights">
                     <h4>💡 消費洞察</h4>
-                    ${analysis.insights.map(insight => `
-                        <div class="insight-item ${insight.level}">
-                            <div class="insight-title">${insight.title}</div>
-                            <div class="insight-content">${insight.content}</div>
-                        </div>
-                    `).join('')}
+                    ${insightsHtml}
                 </div>
                 
                 <div class="recommendations">
                     <h4>🎯 改善建議</h4>
-                    ${analysis.recommendations.map(rec => `
-                        <div class="recommendation-item">
-                            <div class="recommendation-title">${rec.title}</div>
-                            <div class="recommendation-content">${rec.content}</div>
-                        </div>
-                    `).join('')}
+                    ${recommendationsHtml}
                 </div>
             </div>
         `;
         
         document.body.appendChild(panel);
+    }
+    
+    // 顯示錯誤訊息
+    showErrorMessage(message) {
+        const errorPanel = document.createElement('div');
+        errorPanel.className = 'spending-analysis-panel error';
+        errorPanel.innerHTML = `
+            <div class="panel-header">
+                <h3>⚠️ 分析錯誤</h3>
+                <button class="panel-close" onclick="this.closest('.spending-analysis-panel').remove()">✕</button>
+            </div>
+            <div class="panel-content">
+                <div class="error-message">${message}</div>
+                <div class="error-suggestion">
+                    <p>建議：</p>
+                    <ul>
+                        <li>確保您有足夠的記帳記錄</li>
+                        <li>檢查記帳記錄是否包含支出類型</li>
+                        <li>確認記帳記錄的金額和分類資訊完整</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(errorPanel);
     }
 }
 

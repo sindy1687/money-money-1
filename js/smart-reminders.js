@@ -173,7 +173,7 @@ class SmartReminderSystem {
         this.checkRebalancingNeeds(records);
         
         // 檢查投資機會
-        this.checkInvestmentOpportunities();
+        this.analyzeInvestmentOpportunities(records);
     }
     
     // 檢查帳單支付提醒
@@ -361,7 +361,8 @@ class SmartReminderSystem {
             'trend': '📈 消費趨勢提醒',
             'daily_limit': '⚠️ 每日消費提醒',
             'category_alert': '🏷️ 分類消費提醒',
-            'budget_warning': '💰 預算警報'
+            'budget_warning': '💰 預算警報',
+            'no_records': '📝 長期未記帳提醒'
         };
         return titles[type] || '💡 消費提醒';
     }
@@ -372,7 +373,8 @@ class SmartReminderSystem {
             'trend': `本週消費${data.change > 0 ? '增加' : '減少'}了 ${Math.abs(data.change).toFixed(1)}%，從 NT$${(data.lastWeek || 0).toLocaleString()} 到 NT$${(data.thisWeek || 0).toLocaleString()}`,
             'daily_limit': `今日已消費 NT$${(data.spent || 0).toLocaleString()}，超過預算 NT$${(data.over || 0).toLocaleString()}`,
             'category_alert': '某個分類的消費異常增加，建議檢視消費習慣',
-            'budget_warning': '本月預算即將用盡，建議控制消費'
+            'budget_warning': '本月預算即將用盡，建議控制消費',
+            'no_records': `您已經 ${data.daysSinceLastRecord || 0} 天沒有記帳了，建議保持記帳習慣`
         };
         return messages[type] || '消費提醒訊息';
     }
@@ -439,7 +441,8 @@ class SmartReminderSystem {
             'daily_limit': 'high',
             'trend': 'medium',
             'category_alert': 'medium',
-            'budget_warning': 'high'
+            'budget_warning': 'high',
+            'no_records': 'medium'
         };
         return priorities[type] || 'medium';
     }
@@ -477,6 +480,10 @@ class SmartReminderSystem {
             'daily_limit': [
                 { label: '查看明細', action: 'show_details' },
                 { label: '設定限制', action: 'set_limit' }
+            ],
+            'no_records': [
+                { label: '立即記帳', action: 'start_recording' },
+                { label: '查看歷史', action: 'show_history' }
             ]
         };
         return actions[type] || [];
@@ -702,44 +709,103 @@ class SmartReminderSystem {
     
     // 獲取現金位置
     getCashPosition() {
-        // 這裡可以從實際的帳戶餘額計算
-        // 簡化版本：返回固定值
-        return 10000;
+        try {
+            // 從實際帳戶餘額計算現金位置
+            const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+            let totalCash = 0;
+            
+            accounts.forEach(account => {
+                if (account.type === 'cash' || account.type === 'bank' || account.type === 'wallet') {
+                    totalCash += account.balance || 0;
+                }
+            });
+            
+            return totalCash;
+        } catch (error) {
+            console.error('獲取現金位置失敗:', error);
+            return 10000; // 預設值
+        }
     }
     
     // 獲取每日預算
     getDailyBudget() {
-        // 從設定中獲取或計算
-        const monthlyBudget = 30000; // 簡化版本
-        return monthlyBudget / 30;
+        try {
+            // 從預算設定中獲取
+            const budgetSettings = JSON.parse(localStorage.getItem('budgetSettings') || '{}');
+            
+            if (budgetSettings.monthlyBudget) {
+                return budgetSettings.monthlyBudget / 30;
+            }
+            
+            // 如果沒有設定預算，根據歷史消費計算建議預算
+            const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+            if (records.length > 0) {
+                const lastMonth = new Date();
+                lastMonth.setMonth(lastMonth.getMonth() - 1);
+                
+                const lastMonthRecords = records.filter(record => {
+                    const recordDate = new Date(record.date);
+                    return recordDate >= lastMonth && recordDate < new Date();
+                });
+                
+                const avgMonthlySpending = lastMonthRecords.reduce((sum, record) => sum + (record.amount || 0), 0);
+                return avgMonthlySpending / 30;
+            }
+            
+            // 預設每日預算
+            return 1000;
+        } catch (error) {
+            console.error('獲取每日預算失敗:', error);
+            return 1000; // 預設值
+        }
     }
     
     // 獲取帳單
     getBills() {
-        // 從設定中獲取帳單，這裡使用示例數據
-        return [
-            {
-                id: 'bill_1',
-                name: '電費',
-                amount: 1200,
-                dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                paid: false
-            },
-            {
-                id: 'bill_2',
-                name: '水費',
-                amount: 300,
-                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                paid: false
-            },
-            {
-                id: 'bill_3',
-                name: '網路費',
-                amount: 999,
-                dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                paid: false
+        try {
+            // 從實際帳單設定中獲取
+            const bills = JSON.parse(localStorage.getItem('bills') || '[]');
+            
+            if (bills.length > 0) {
+                return bills.filter(bill => !bill.paid); // 只返回未支付的帳單
             }
-        ];
+            
+            // 如果沒有設定帳單，返回一些常見的示例帳單
+            const today = new Date();
+            return [
+                {
+                    id: 'bill_electricity',
+                    name: '電費',
+                    amount: 1200,
+                    dueDate: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    paid: false
+                },
+                {
+                    id: 'bill_water',
+                    name: '水費',
+                    amount: 300,
+                    dueDate: new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    paid: false
+                },
+                {
+                    id: 'bill_internet',
+                    name: '網路費',
+                    amount: 999,
+                    dueDate: new Date(today.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    paid: false
+                },
+                {
+                    id: 'bill_phone',
+                    name: '電話費',
+                    amount: 800,
+                    dueDate: new Date(today.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    paid: false
+                }
+            ];
+        } catch (error) {
+            console.error('獲取帳單失敗:', error);
+            return [];
+        }
     }
     
     // 檢查市場機會
@@ -1068,6 +1134,46 @@ class SmartReminderSystem {
         this.settings = { ...this.settings, ...newSettings };
         this.saveSettings();
     }
+    
+    // 執行主動檢查
+    performProactiveChecks() {
+        console.log('🔔 執行智慧提醒主動檢查...');
+        
+        // 檢查帳單提醒
+        this.checkBillReminders();
+        
+        // 檢查今日消費
+        const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+        this.checkConsumptionAlerts(records);
+        
+        // 檢查投資機會
+        const investmentRecords = JSON.parse(localStorage.getItem('investmentRecords') || '[]');
+        this.checkInvestmentAlerts(investmentRecords);
+        
+        // 檢查長期未記帳
+        this.checkLongTermNoRecords(records);
+        
+        console.log('✅ 智慧提醒主動檢查完成');
+    }
+    
+    // 檢查長期未記帳
+    checkLongTermNoRecords(records) {
+        if (records.length === 0) return;
+        
+        const lastRecord = records[records.length - 1];
+        const lastRecordDate = new Date(lastRecord.date);
+        const today = new Date();
+        const daysSinceLastRecord = Math.floor((today - lastRecordDate) / (1000 * 60 * 60 * 24));
+        
+        // 如果超過3天未記帳，發出提醒
+        if (daysSinceLastRecord >= 3) {
+            this.createConsumptionReminder('no_records', {
+                type: 'no_records',
+                daysSinceLastRecord: daysSinceLastRecord,
+                lastRecordDate: lastRecord.date
+            });
+        }
+    }
 }
 
 // 創建智慧提醒系統實例
@@ -1076,6 +1182,11 @@ const smartReminderSystem = new SmartReminderSystem();
 // 當頁面載入完成時初始化
 document.addEventListener('DOMContentLoaded', function() {
     smartReminderSystem.init();
+    
+    // 延遲執行主動檢查，確保其他系統已載入
+    setTimeout(() => {
+        smartReminderSystem.performProactiveChecks();
+    }, 2000);
 });
 
 // 導出系統供其他模組使用

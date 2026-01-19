@@ -316,25 +316,6 @@ var themes = window.AppThemes || (window.AppThemes = [
         dividendCardImage: 'https://i.pinimg.com/736x/21/4d/cc/214dccff6dac6b30bebd621afc60669d.jpg'
     },
     {
-        id: 'chick',
-        name: '萌雞樂園',
-        icon: '🐥',
-        buttonIcon: '🐣',
-        preview: 'url("https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg") center/cover',
-        color: '#98FB98',
-        category: 'cute',
-        backgroundImage: 'https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg',
-        investmentCardImage: 'https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg',
-        accountingCardImage: 'https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg',
-        walletBudgetCardImage: 'https://i.pinimg.com/1200x/95/64/99/956499812b93c3c5bf8226051c7e627f.jpg',
-        monthlyPlanningCardImage: 'https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg',
-        investmentSettingsCardImage: 'https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg',
-        holdingCardImage: 'https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg',
-        buyingCardImage: 'https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg',
-        sellingCardImage: 'https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg',
-        dividendCardImage: 'https://i.pinimg.com/736x/e0/43/7a/e0437a16e63e214acd07430c25dfc251.jpg'
-    },
-    {
         id: 'dreamyfish',
         name: '夢幻魚語',
         icon: '🐠',
@@ -822,14 +803,6 @@ function updateThemeButtons(themeId) {
             navInvestment: '🌸',
             navChart: '🦋',
             navSettings: '✨'
-        },
-        chick: {
-            fab: '🐥',
-            navLedger: '🐣',
-            navWallet: '🐤',
-            navInvestment: '🐥',
-            navChart: '🐣',
-            navSettings: '🐤'
         },
         dreamyfish: {
             fab: '🐠',
