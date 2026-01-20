@@ -7,6 +7,7 @@ class SmartAccountingManager {
         this.isInitialized = false;
         this.userCorrections = [];
         this.suggestionHistory = [];
+        this.smartSuggestions = [];
     }
     
     // 初始化智慧記帳功能
@@ -15,9 +16,219 @@ class SmartAccountingManager {
         
         this.bindEvents();
         this.loadUserCorrections();
+        this.addSmartAnalysisPanel();
         this.isInitialized = true;
         
         console.log('智慧記帳功能已初始化');
+    }
+    
+    // 添加智慧分析面板
+    addSmartAnalysisPanel() {
+        const container = document.querySelector('.container');
+        if (!container) return;
+        
+        // 檢查是否已存在
+        if (document.getElementById('smartAnalysisPanel')) return;
+        
+        const panel = document.createElement('div');
+        panel.id = 'smartAnalysisPanel';
+        panel.className = 'smart-analysis-panel';
+        panel.innerHTML = `
+            <div class="panel-header">
+                <h3>🤖 智慧分析</h3>
+                <button class="panel-toggle" onclick="smartAccountingManager.togglePanel()">−</button>
+            </div>
+            <div class="panel-content">
+                <div class="suggestions-list" id="suggestionsList">
+                    <div class="loading-suggestions">分析中...</div>
+                </div>
+                <div class="quick-actions">
+                    <button class="smart-action-btn" onclick="smartAccountingManager.showCategorySuggestions()">
+                        📋 分類建議
+                    </button>
+                    <button class="smart-action-btn" onclick="smartAccountingManager.showSpendingAnalysis()">
+                        📊 消費分析
+                    </button>
+                    <button class="smart-action-btn" onclick="smartAccountingManager.showBudgetAdvice()">
+                        💰 預算建議
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // 插入到主容器頂部
+        container.insertBefore(panel, container.firstChild);
+        
+        // 載入建議
+        this.loadSmartSuggestions();
+    }
+    
+    // 切換面板顯示
+    togglePanel() {
+        const panel = document.getElementById('smartAnalysisPanel');
+        const content = panel.querySelector('.panel-content');
+        const toggle = panel.querySelector('.panel-toggle');
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            toggle.textContent = '−';
+        } else {
+            content.style.display = 'none';
+            toggle.textContent = '+';
+        }
+    }
+    
+    // 載入智慧建議
+    loadSmartSuggestions() {
+        const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+        this.smartSuggestions = SmartAccounting.generateSmartSuggestions(records);
+        this.displaySuggestions();
+    }
+    
+    // 顯示建議
+    displaySuggestions() {
+        const suggestionsList = document.getElementById('suggestionsList');
+        if (!suggestionsList) return;
+        
+        if (this.smartSuggestions.length === 0) {
+            suggestionsList.innerHTML = '<div class="no-suggestions">暫無建議，開始記帳後將為您提供智慧分析</div>';
+            return;
+        }
+        
+        suggestionsList.innerHTML = this.smartSuggestions.map(suggestion => `
+            <div class="suggestion-item suggestion-${suggestion.level}">
+                <div class="suggestion-header">
+                    <span class="suggestion-icon">${suggestion.level === 'warning' ? '⚠️' : '💡'}</span>
+                    <span class="suggestion-title">${suggestion.title}</span>
+                </div>
+                <div class="suggestion-content">${suggestion.content}</div>
+                <button class="suggestion-action" onclick="smartAccountingManager.handleSuggestionAction('${suggestion.action}')">
+                    查看詳情
+                </button>
+            </div>
+        `).join('');
+    }
+    
+    // 處理建議動作
+    handleSuggestionAction(action) {
+        switch (action) {
+            case 'review_large_expenses':
+                this.showLargeExpenses();
+                break;
+            case 'review_category':
+                this.showCategoryDetails();
+                break;
+            case 'review_unusual':
+                this.showUnusualExpenses();
+                break;
+            case 'adjust_budget':
+                this.showBudgetAdjustment();
+                break;
+            case 'improve_savings':
+                this.showSavingsTips();
+                break;
+            default:
+                console.log('未知的建議動作:', action);
+        }
+    }
+    
+    // 顯示大額支出
+    showLargeExpenses() {
+        const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+        const now = new Date();
+        const monthlyExpenses = records.filter(r => {
+            const date = new Date(r.date);
+            return (r.type === 'expense' || !r.type) && 
+                   date.getMonth() === now.getMonth() && 
+                   date.getFullYear() === now.getFullYear() &&
+                   r.amount > 5000;
+        });
+        
+        if (monthlyExpenses.length === 0) {
+            alert('本月沒有大額支出記錄');
+            return;
+        }
+        
+        let content = '本月大額支出記錄：\n\n';
+        monthlyExpenses.forEach(r => {
+            content += `${r.date} ${r.category || '未分類'} NT$ ${r.amount.toLocaleString()}\n`;
+            if (r.note) content += `備註：${r.note}\n`;
+            content += '\n';
+        });
+        
+        alert(content);
+    }
+    
+    // 顯示分類建議
+    showCategorySuggestions() {
+        const amount = parseFloat(document.getElementById('amount')?.value || 0);
+        const description = document.getElementById('description')?.value || '';
+        
+        if (amount <= 0) {
+            alert('請先輸入金額');
+            return;
+        }
+        
+        const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+        const suggestion = SmartAccounting.suggestCategoryEnhanced(amount, description, null, records);
+        
+        if (!suggestion) {
+            alert('無法提供分類建議');
+            return;
+        }
+        
+        this.showSuggestionDialog(suggestion);
+    }
+    
+    // 顯示消費分析
+    showSpendingAnalysis() {
+        const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+        const analysis = SmartAccounting.analyzeSpendingPattern(records);
+        
+        let content = '消費模式分析：\n\n';
+        
+        if (analysis.topCategories && analysis.topCategories.length > 0) {
+            content += '主要支出類別：\n';
+            analysis.topCategories.slice(0, 5).forEach(cat => {
+                content += `${cat.category}: NT$ ${cat.total.toLocaleString()} (${cat.count} 筆)\n`;
+            });
+            content += '\n';
+        }
+        
+        if (analysis.insights && analysis.insights.length > 0) {
+            content += '分析洞察：\n';
+            analysis.insights.forEach(insight => {
+                content += `• ${insight.content}\n`;
+            });
+        }
+        
+        if (content === '消費模式分析：\n\n') {
+            content = '暫無足夠數據進行分析';
+        }
+        
+        alert(content);
+    }
+    
+    // 顯示預算建議
+    showBudgetAdvice() {
+        const records = JSON.parse(localStorage.getItem('accountingRecords') || '[]');
+        const suggestions = SmartAccounting.generateSmartSuggestions(records);
+        
+        const budgetSuggestions = suggestions.filter(s => 
+            s.type === 'budget_projection' || s.type === 'savings_advice'
+        );
+        
+        if (budgetSuggestions.length === 0) {
+            alert('暫無預算建議');
+            return;
+        }
+        
+        let content = '預算建議：\n\n';
+        budgetSuggestions.forEach(s => {
+            content += `${s.title}\n${s.content}\n\n`;
+        });
+        
+        alert(content);
     }
     
     // 綁定事件

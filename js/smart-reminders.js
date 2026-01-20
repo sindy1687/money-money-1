@@ -1190,4 +1190,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // 導出系統供其他模組使用
-window.SmartReminderSystem = smartReminderSystem;
+window.smartReminderSystem = smartReminderSystem;
+window.SmartReminderSystem = SmartReminderSystem;
