@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>記帳 - 主輸入畫面</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ff69b4'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white'>💰</text></svg>">
+    <link rel="alternate icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ff69b4'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white'>\1F4B0</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="emerald-dream-theme.css">
     <link rel="stylesheet" href="flame-theme.css">
@@ -14,11 +14,16 @@
     <link rel="stylesheet" href="festive-theme.css">
     <link rel="stylesheet" href="dreamy-galaxy-theme.css">
     <link rel="stylesheet" href="whimsical-starry-theme.css">
+    <link rel="stylesheet" href="anime-elegance-theme.css">
+    <link rel="stylesheet" href="dreamy-dynamic-theme.css">
     <link rel="stylesheet" href="searchHistory.css">
     <link rel="stylesheet" href="css/smart-accounting.css">
     <link rel="stylesheet" href="css/smart-reminders.css">
+    <link rel="stylesheet" href="css/smart-analysis-panel.css">
     <link rel="stylesheet" href="emoji-font-fix.css">
     <link rel="stylesheet" href="current-price-black.css">
+    <link rel="stylesheet" href="emergency-icon-fix.css">
+    <link rel="stylesheet" href="clean-garbage-icons.css">
     
     <!-- Google Fonts - 美觀字體系統 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +31,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&family=Clash+Display:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="fix-icon-encoding.js"></script>
+    <script src="unified-icon-fix.js"></script>
 </head>
 <body>
     <div class="theme-video-background" aria-hidden="true">
@@ -38,6 +43,12 @@
         </video>
         <video id="shinchanPoolThemeVideo" class="theme-video" autoplay loop muted playsinline preload="auto">
             <source src="https://v1.pinimg.com/videos/iht/expMp4/76/35/eb/7635eb2cc1d1c08a867742f7144faf11_720w.mp4" type="video/mp4">
+        </video>
+        <video id="festiveThemeVideo" class="theme-video" autoplay loop muted playsinline preload="auto">
+            <source src="https://v1.pinimg.com/videos/iht/expMp4/4f/eb/42/4feb42e38cce1f3ab5505cf0cee1d2e3_720w.mp4" type="video/mp4">
+        </video>
+        <video id="dreamyDynamicThemeVideo" class="theme-video" autoplay loop muted playsinline preload="auto">
+            <source src="https://v1.pinimg.com/videos/iht/expMp4/c7/39/73/c739737a7c0471e01fa4e606507d0a48_720w.mp4" type="video/mp4">
         </video>
         <div class="theme-video-gradient"></div>
     </div>
@@ -1237,6 +1248,7 @@
                     <div class="metric-label">現價</div>
                     <div class="metric-price-wrapper metric-price-wrapper--simple">
                         <input type="number" class="metric-input-large" id="metricCurrentPrice" placeholder="輸入現價" step="0.01">
+                        <button type="button" class="metric-clear-btn" id="metricClearPrice" title="清除手動輸入的價格">✕</button>
                         <a href="#" class="metric-quote-btn" id="metricQuoteLink" data-site="cnyes" target="_blank" rel="noopener noreferrer">
                             鉅亨網查價
                         </a>
@@ -2012,6 +2024,37 @@
         </div>
     </div>
 
+    <!-- 更新提示彈窗 -->
+    <div class="update-notification-modal" id="updateNotificationModal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content update-modal-content">
+            <div class="modal-header">
+                <div class="update-notification-header">
+                    <div class="update-icon">🎉</div>
+                    <div>
+                        <h3 class="modal-title">發現新更新！</h3>
+                        <p class="update-subtitle" id="updateSubtitle">精彩新功能等你來體驗</p>
+                    </div>
+                </div>
+                <button class="modal-close-btn" id="updateNotificationClose">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="update-content" id="updateContent">
+                    <!-- 更新內容將由 JavaScript 動態生成 -->
+                </div>
+                <div class="update-features" id="updateFeatures">
+                    <!-- 新功能列表將由 JavaScript 動態生成 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="update-btn secondary" id="updateSkipBtn">稍後查看</button>
+                <button class="update-btn primary" id="updateExploreBtn">立即探索</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 更新提示系統 -->
+    <script src="js/update-notifications.js"></script>
     <!-- 模組化腳本 -->
     <script src="js/categories.js"></script>
     <script src="js/storage.js"></script>

@@ -14791,11 +14791,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const smartRemindersBtn = document.getElementById('smartRemindersBtn');
     if (smartRemindersBtn) {
         smartRemindersBtn.addEventListener('click', () => {
+            // 檢查智慧提醒系統是否已載入
             if (window.smartReminderSystem && typeof window.smartReminderSystem.showReminderPanel === 'function') {
                 window.smartReminderSystem.showReminderPanel();
+            } else if (window.SmartReminderSystem && window.SmartReminderSystem.prototype.showReminderPanel) {
+                // 如果系統類別存在但實例不存在，創建實例
+                const instance = new window.SmartReminderSystem();
+                instance.init();
+                window.smartReminderSystem = instance;
+                instance.showReminderPanel();
             } else {
-                console.warn('智慧提醒系統未載入');
-                alert('智慧提醒系統正在載入中，請稍後再試...');
+                console.warn('智慧提醒系統未載入，嘗試手動初始化...');
+                // 嘗試手動載入和初始化
+                setTimeout(() => {
+                    if (window.smartReminderSystem) {
+                        window.smartReminderSystem.showReminderPanel();
+                    } else {
+                        alert('智慧提醒系統載入失敗，請重新整理頁面');
+                    }
+                }, 1000);
             }
         });
     }
@@ -16165,12 +16179,14 @@ function showStockDetailPage(stockCode) {
             currentPriceInput.parentNode.replaceChild(newInput, currentPriceInput);
             currentPriceInput = newInput;
             
-            newInput.addEventListener('input', () => {
+            // 添加多個事件監聽器確保更新
+            const handlePriceUpdate = () => {
                 if (typeof applyAutoWidth === 'function') {
                     applyAutoWidth(newInput);
                 } else if (typeof window !== 'undefined' && typeof window.applyAutoWidth === 'function') {
                     window.applyAutoWidth(newInput);
                 }
+                
                 const currentPrice = parseFloat(newInput.value) || stockAvgCost;
                 const unrealizedPnl = (currentPrice - stockAvgCost) * stockShares;
                 const pnlEl = document.getElementById('metricUnrealizedPnl');
@@ -16182,10 +16198,61 @@ function showStockDetailPage(stockCode) {
                 // 保存當前價格到 localStorage（標記為手動輸入）
                 if (currentPrice && currentPrice > 0) {
                     saveStockCurrentPrice(stockCode, currentPrice, true); // true = 手動輸入
+                    console.log(`💾 已保存手動輸入的價格: ${stockCode} = NT$${currentPrice}`);
                     // 更新投資總覽
                     updateInvestmentSummary();
+                    // 更新投資組合顯示
+                    updatePortfolioList();
+                    updateStockList();
                 }
-            });
+            };
+            
+            // 添加多種事件監聽器
+            newInput.addEventListener('input', handlePriceUpdate);
+            newInput.addEventListener('change', handlePriceUpdate);
+            newInput.addEventListener('blur', handlePriceUpdate);
+            
+            // 確保輸入框可以編輯
+            newInput.removeAttribute('readonly');
+            newInput.removeAttribute('disabled');
+            newInput.style.pointerEvents = 'auto';
+            newInput.style.userSelect = 'auto';
+            newInput.style.webkitUserSelect = 'auto';
+        }
+        
+        // 添加清除按鈕事件監聽器
+        const clearBtn = document.getElementById('metricClearPrice');
+        if (clearBtn) {
+            clearBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 清除手動輸入的價格標記
+                const stockPrices = JSON.parse(localStorage.getItem('stockCurrentPrices') || '{}');
+                if (stockPrices[stockCode]) {
+                    delete stockPrices[stockCode];
+                    localStorage.setItem('stockCurrentPrices', JSON.stringify(stockPrices));
+                    console.log(`🗑️ 已清除 ${stockCode} 的手動輸入價格`);
+                }
+                
+                // 重新獲取自動價格
+                fetchStockPrice(stockCode).then(price => {
+                    if (price && currentPriceInput) {
+                        currentPriceInput.value = price.toFixed(2);
+                        applyAutoWidth(currentPriceInput);
+                        // 觸發 input 事件以更新未實現損益
+                        currentPriceInput.dispatchEvent(new Event('input'));
+                        console.log(`🔄 已重新獲取 ${stockCode} 的自動價格: NT$${price}`);
+                    }
+                }).catch(err => {
+                    console.log('重新獲取價格失敗，使用平均成本');
+                    if (currentPriceInput) {
+                        currentPriceInput.value = stockAvgCost.toFixed(2);
+                        applyAutoWidth(currentPriceInput);
+                        currentPriceInput.dispatchEvent(new Event('input'));
+                    }
+                });
+            };
         }
         
         // 初始計算未實現損益

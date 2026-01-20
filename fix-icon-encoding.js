@@ -12,7 +12,19 @@ function fixIconEncoding() {
         '.title-icon',
         '.stock-icon-large',
         '.form-header-icon',
-        '.back-btn-icon'
+        '.back-btn-icon',
+        '.tab-icon',
+        '.fab-btn',
+        '.back-btn',
+        '.input-back-btn',
+        '.modal-back-btn',
+        '.dca-back-btn',
+        '.dca-setup-back-btn',
+        '.detail-back-btn',
+        '.investment-back-btn',
+        '.investment-form-back-btn',
+        '.daily-budget-back-btn',
+        '.nav-back-btn'
     ];
     
     // 修復每個圖示元素
@@ -61,7 +73,7 @@ if (document.readyState === 'loading') {
 }
 
 // 主題切換時也要修復
-const observer = new MutationObserver((mutations) => {
+const iconEncodingObserver = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
             setTimeout(fixIconEncoding, 100);
@@ -69,7 +81,7 @@ const observer = new MutationObserver((mutations) => {
     });
 });
 
-observer.observe(document.documentElement, {
+iconEncodingObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['data-theme']
 });

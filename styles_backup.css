@@ -14859,7 +14859,7 @@ width: 100%;
 }
 
 .stock-grid-card-tag--shares::before {
-    content: '📊';
+    content: '\1F4CA';
     font-size: 12px;
     color: rgba(15, 23, 42, 0.6);
 }
@@ -16806,35 +16806,35 @@ width: 100%;
 /* �箔��峕�蝐斗溶�惩虾�𥕦�璅� */
 /* 隞�Ⅳ甈�� */
 .form-field:has(#calcStockCodeInput) .form-label::before {
-    content: '📊';
+    content: '\1F4CA';
     font-size: 16px;
     margin-right: 2px;
 }
 
 /* 股票名稱欄位 */
 .form-field:has(#calcStockNameInput) .form-label::before {
-    content: '📈';
+    content: '\1F4C8';
     font-size: 16px;
     margin-right: 2px;
 }
 
 /* 日期欄位 */
 .form-field:has(#calcDateInput) .form-label::before {
-    content: '📅';
+    content: '\1F4C5';
     font-size: 16px;
     margin-right: 2px;
 }
 
 /* 價格欄位 */
 .form-field:has(#calcPriceInput) .form-label::before {
-    content: '💰';
+    content: '\1F4B0';
     font-size: 16px;
     margin-right: 2px;
 }
 
 /* 股數欄位 */
 .form-field:has(#calcSharesInput) .form-label::before {
-    content: '📊';
+    content: '\1F4CA';
     font-size: 16px;
     margin-right: 2px;
 }
@@ -27777,7 +27777,7 @@ body {
 }
 
 .portfolio-shares::before {
-    content: '📊';
+    content: '\1F4CA';
     margin-right: 8px;
     font-size: 16px;
     opacity: 0.8;
@@ -27813,7 +27813,7 @@ body {
 }
 
 .stock-grid-card-tag--shares::before {
-    content: '��';
+    content: '\1F4CA';
     font-size: 14px !important;
     opacity: 0.8 !important;
 }
@@ -37702,7 +37702,7 @@ html:has([data-theme="foxfire"]) .stock-grid-card-tag--shares::before,
 body[data-theme="foxfire"] .portfolio-shares::before,
 body[data-theme="foxfire"] .stock-shares::before,
 body[data-theme="foxfire"] .stock-grid-card-tag--shares::before {
-    content: '📊' !important;
+    content: '\1F4CA' !important;
     font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'EmojiOne Color', sans-serif !important;
     font-size: 16px !important;
     color: var(--text-primary) !important;
