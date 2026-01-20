@@ -5115,7 +5115,7 @@ width: 100%;
 }
 
 .metric-quote-btn::before {
-    content: '��';
+    content: '';
     font-size: 12px;
     opacity: 0.8;
 }
@@ -5125,6 +5125,38 @@ width: 100%;
     background: rgba(102, 126, 234, 0.18);
     transform: translateY(-1px);
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+}
+
+.metric-clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+    opacity: 0.7;
+}
+
+.metric-clear-btn:hover {
+    background: rgba(255, 59, 48, 0.2);
+    opacity: 1;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.metric-clear-btn:active {
+    transform: translateY(-50%) scale(0.95);
 }
 
 .metric-quote-btn:active {
@@ -5184,7 +5216,7 @@ width: 100%;
 }
 
 .metric-quick-link::before {
-    content: '��';
+    content: '';
     font-size: 11px;
     opacity: 0.75;
 }
@@ -11015,7 +11047,7 @@ width: 100%;
 }
 
 .theme-item-preview--image.error::after {
-    content: '�麱';
+    content: '⚠️';
     position: absolute;
     top: 50%;
     left: 50%;
@@ -14865,9 +14897,9 @@ width: 100%;
 }
 
 .stock-grid-card-tag--shares::before {
-    content: '📊';
+    content: '\1F4CA';
     font-size: 12px;
-    color: rgba(15, 23, 42, 0.6);
+    color: #4a90e2;
 }
 
 .stock-grid-card-tag.positive {
@@ -16812,35 +16844,35 @@ width: 100%;
 /* �箔��峕�蝐斗溶�惩虾�𥕦�璅� */
 /* 隞�Ⅳ甈�� */
 .form-field:has(#calcStockCodeInput) .form-label::before {
-    content: '📊';
+    content: '\1F4CA';
     font-size: 16px;
     margin-right: 2px;
 }
 
 /* 股票名稱欄位 */
 .form-field:has(#calcStockNameInput) .form-label::before {
-    content: '📈';
+    content: '\1F4C8';
     font-size: 16px;
     margin-right: 2px;
 }
 
 /* 日期欄位 */
 .form-field:has(#calcDateInput) .form-label::before {
-    content: '📅';
+    content: '\1F4C5';
     font-size: 16px;
     margin-right: 2px;
 }
 
 /* 價格欄位 */
 .form-field:has(#calcPriceInput) .form-label::before {
-    content: '💰';
+    content: '\1F4B0';
     font-size: 16px;
     margin-right: 2px;
 }
 
 /* 股數欄位 */
 .form-field:has(#calcSharesInput) .form-label::before {
-    content: '📊';
+    content: '\1F4CA';
     font-size: 16px;
     margin-right: 2px;
 }
@@ -27783,9 +27815,10 @@ body {
 }
 
 .portfolio-shares::before {
-    content: '📊';
+    content: '\1F4C8';
     margin-right: 8px;
     font-size: 16px;
+    color: #4a90e2;
     opacity: 0.8;
     transition: all 0.3s ease;
 }
@@ -27816,12 +27849,6 @@ body {
     -webkit-backdrop-filter: blur(8px) !important;
     transform: translateY(0) !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-.stock-grid-card-tag--shares::before {
-    content: '��';
-    font-size: 14px !important;
-    opacity: 0.8 !important;
 }
 
 .stock-grid-card-tag--shares:hover {
@@ -31655,7 +31682,7 @@ body {
 :root[data-theme="starry"] select:focus {
     background: rgba(255, 255, 255, 0.12) !important;
     border-color: var(--color-secondary) !important;
-    box-shadow: 0 0 20px rgba(236, 72, 153, 0.3) !important, inset 0 0 10px rgba(107, 70, 193, 0.1) !important;
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.3), inset 0 0 10px rgba(107, 70, 193, 0.1) !important;
     transform: translateY(-1px) !important;
 }
 
@@ -35611,8 +35638,8 @@ html:has([data-theme="shinobu"]) *[class*="budget-remaining"] {
     background: linear-gradient(135deg, var(--color-secondary) 0%, color-mix(in srgb, var(--color-secondary) 90%, var(--color-primary)) 100%) !important;
     color: var(--text-white) !important;
     box-shadow: 0 8px 24px rgba(255, 215, 0, 0.4) !important;
-    bottom: 220px !important;
-    right: 16px !important;
+    border: 2px solid rgba(255, 215, 0, 0.3) !important;
+    transform: translateY(-120px) !important;
     border: 2px solid var(--color-secondary-rgba-30) !important;
     font-family: var(--font-primary) !important;
     font-weight: var(--font-weight-black) !important;
@@ -35635,7 +35662,7 @@ html:has([data-theme="shinobu"]) *[class*="budget-remaining"] {
         width: 48px !important;
         height: 48px !important;
         font-size: 20px !important;
-        bottom: 130px !important;
+        bottom: 250px !important;
         right: 16px !important;
     }
 }
@@ -35643,7 +35670,7 @@ html:has([data-theme="shinobu"]) *[class*="budget-remaining"] {
 :root[data-theme="getrich"] .fab-btn:hover {
     background: linear-gradient(135deg, color-mix(in srgb, var(--color-secondary) 90%, var(--color-primary)) 0%, var(--color-primary) 100%) !important;
     box-shadow: 0 12px 32px rgba(255, 215, 0, 0.5) !important;
-    transform: translateY(-2px) scale(1.05) !important;
+    transform: translateY(-122px) scale(1.05) !important;
 }
 
 /* 撠舘⏛�� */
@@ -37708,9 +37735,10 @@ html:has([data-theme="foxfire"]) .stock-grid-card-tag--shares::before,
 body[data-theme="foxfire"] .portfolio-shares::before,
 body[data-theme="foxfire"] .stock-shares::before,
 body[data-theme="foxfire"] .stock-grid-card-tag--shares::before {
-    content: '📊' !important;
+    content: '\1F4CA' !important;
     font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'EmojiOne Color', sans-serif !important;
     font-size: 16px !important;
+    color: #4a90e2 !important;
     color: var(--text-primary) !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
     opacity: 1 !important;
@@ -37961,4 +37989,232 @@ body[data-theme="foxfire"] .form-label::before {
 :root[data-theme*="dark"] .current-price-input:focus {
     background: rgba(255, 255, 255, 0.15) !important;
     border-color: var(--color-primary) !important;
+}
+
+/* ========== 更新提示彈窗樣式 ========== */
+.update-notification-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.update-modal-content {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    border-radius: 24px;
+    max-width: 480px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    animation: slideUp 0.4s ease-out;
+    position: relative;
+}
+
+.update-notification-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+}
+
+.update-icon {
+    font-size: 48px;
+    animation: bounce 2s infinite;
+}
+
+.update-subtitle {
+    color: #666;
+    font-size: 14px;
+    margin: 4px 0 0 0;
+    font-weight: 400;
+}
+
+.update-content {
+    padding: 20px 0;
+    text-align: center;
+}
+
+.update-content h4 {
+    color: #333;
+    font-size: 18px;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.update-content p {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.update-features {
+    margin-top: 20px;
+}
+
+.update-feature-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(79, 70, 229, 0.05);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+}
+
+.update-feature-item:hover {
+    background: rgba(79, 70, 229, 0.1);
+    transform: translateX(4px);
+}
+
+.update-feature-icon {
+    font-size: 20px;
+    min-width: 24px;
+}
+
+.update-feature-text {
+    flex: 1;
+}
+
+.update-feature-title {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+    margin: 0 0 4px 0;
+}
+
+.update-feature-desc {
+    color: #666;
+    font-size: 12px;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.update-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: none;
+    letter-spacing: 0.5px;
+}
+
+.update-btn.primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.update-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+}
+
+.update-btn.secondary {
+    background: rgba(0, 0, 0, 0.05);
+    color: #666;
+}
+
+.update-btn.secondary:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* 動畫效果 */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+/* 深色主題適配 */
+:root[data-theme*="dark"] .update-modal-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #ffffff;
+}
+
+:root[data-theme*="dark"] .update-subtitle {
+    color: #a0a0a0;
+}
+
+:root[data-theme*="dark"] .update-content h4 {
+    color: #ffffff;
+}
+
+:root[data-theme*="dark"] .update-content p {
+    color: #a0a0a0;
+}
+
+:root[data-theme*="dark"] .update-feature-item {
+    background: rgba(79, 70, 229, 0.2);
+}
+
+:root[data-theme*="dark"] .update-feature-item:hover {
+    background: rgba(79, 70, 229, 0.3);
+}
+
+:root[data-theme*="dark"] .update-feature-title {
+    color: #ffffff;
+}
+
+:root[data-theme*="dark"] .update-feature-desc {
+    color: #a0a0a0;
+}
+
+:root[data-theme*="dark"] .update-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #a0a0a0;
+}
+
+:root[data-theme*="dark"] .update-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* 響應式設計 */
+@media (max-width: 480px) {
+    .update-modal-content {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .update-notification-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+    
+    .update-icon {
+        font-size: 36px;
+    }
+    
+    .update-btn {
+        padding: 10px 20px;
+        font-size: 13px;
+    }
 }
